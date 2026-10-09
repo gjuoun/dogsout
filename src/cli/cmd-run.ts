@@ -55,8 +55,11 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 		inject[n] = v.value;
 	}
 
+	// strip JTK_MASTER: the master password must not leak into child env (agent-run commands)
+	const { JTK_MASTER: _stripped, ...parentEnv } = process.env;
+	void _stripped;
 	const proc = Bun.spawn(cmd, {
-		env: { ...process.env, ...inject },
+		env: { ...parentEnv, ...inject },
 		stdout: "inherit",
 		stderr: "inherit",
 	});
