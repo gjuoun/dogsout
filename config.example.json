@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "settings": {
+    "request_ttl": "15m",
+    "request_ttl_human": "24h",
+    "token_max_ttl": "8760h",
+    "always_decay": "720h",
+    "auto_lock": "30m",
+    "default_decision": "ask"
+  },
+  "principals": [
+    {
+      "name": "speedtest",
+      "kind": "agent",
+      "group": "cron",
+      "public_key": "ed25519:9f3a…"
+    },
+    {
+      "name": "hermes-cron",
+      "kind": "agent",
+      "group": "cron",
+      "public_key": "ed25519:c21b…"
+    },
+    {
+      "name": "xy-laptop",
+      "kind": "user",
+      "group": "family",
+      "public_key": "ed25519:77de…"
+    }
+  ],
+  "rules": [
+    {
+      "id": "cron-bulk",
+      "principal": "group:cron",
+      "resource": "*_API_KEY",
+      "decide": "allow",
+      "ttl": "24h"
+    },
+    {
+      "id": "speedtest-zai",
+      "principal": "agent:speedtest",
+      "resource": "ZAI_*",
+      "decide": "ask",
+      "ttl": "1h",
+      "ask_on": [
+        "first-use",
+        "value-changed"
+      ]
+    },
+    {
+      "id": "high-sensitivity",
+      "principal": "*",
+      "resource": "*:sensitivity=high",
+      "decide": "ask",
+      "ttl": "once"
+    }
+  ]
+}

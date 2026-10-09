@@ -1,0 +1,28 @@
+{
+  "name": "junethekey",
+  "version": "0.0.1",
+  "description": "The credential broker for AI agents",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gjuoun/junethekey.git"
+  },
+  "bin": {
+    "jtk": "src/cli/main.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "dependencies": {
+    "zod": "^4.0.0",
+    "neverthrow": "^8.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}
