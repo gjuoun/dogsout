@@ -4,7 +4,7 @@
 
 `jtk` is a local-first, open-source credential broker: a daemon holds your secrets and releases them to agents (or humans) only under a human-tunable policy — allow / ask / deny, per principal × credential × moment — with short-lived grants, a tamper-evident audit log, and one-tap approval from your phone. Values never leave your machine.
 
-> **Status: F1 shipped** — the local monolith CLI below works today. Policy engine, daemon, phone approval, relay, and tokens are the next feature increments (see [docs-spec.md](docs-spec.md) §9).
+> **Status: F1 shipped** — the local monolith CLI below works today. Policy engine, daemon, phone approval, relay, and tokens are the next feature increments (see the [feature index](features/INDEX.md)).
 
 ## Quick start (F1 monolith)
 
@@ -12,7 +12,8 @@
 git clone https://github.com/gjuoun/junethekey && cd junethekey
 bun install
 
-# every command reads JTK_HOME (default ~/.config/junethekey) and JTK_MASTER
+# JTK_HOME selects storage (default ~/.config/junethekey); vault operations use JTK_MASTER
+# export/help do not decrypt or require the master
 export JTK_MASTER="a-long-master-passphrase"
 
 bun src/cli/main.ts init                       # create vault.enc (AES-256-GCM, argon2id) + config.json
@@ -21,28 +22,32 @@ bun src/cli/main.ts get jtk://dev/zai/api_key                 # masked digest (s
 bun src/cli/main.ts get jtk://dev/zai/api_key --reveal        # actual value
 bun src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alias
 
-# run a command with secrets injected into its env — values never touch disk or shell history
+# inject secrets into child env without a plaintext cache; the child can still persist values
 bun src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
 
 # item spread (--from-item) and whole .env files (--from-env: literals pass through, jtk:// refs resolve)
 printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only — committable
 bun src/cli/main.ts run --from-env app.env -- ./deploy.sh
 
-# migrate from a .env file (direct values in; jtk:// refs become aliases; op:// lines skipped with a warning)
+# migrate a simple KEY=value file (values in; jtk:// becomes aliases; op:// skips appear in the summary)
 printf 'DEEPSEEK_API_KEY=sk-x\nZAI=jtk://dev/zai/api_key\n' > keys.env
 bun src/cli/main.ts import-env keys.env --vault dev --item misc
 bun src/cli/main.ts export --format env-ref                  # refs only, safe to commit
 ```
 
+## Current security boundary
+
+F1 is a local vault tool, not yet a policy/approval boundary; it does not defend against an already-compromised same-uid process. `run` strips inherited `JTK_MASTER`, but explicit injection of that name can restore it — see [the documented gap](features/execution.md#run-noleak). Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
+
 ## Why
 
 - Password-manager service accounts (1Password, Bitwarden) are vault-wide, read-only, and have no approval hook or per-item scoping — too coarse for local agents.
 - Coding agents already have permission prompts for tools; secrets deserve the same treatment.
-- 1Password items cannot reference each other — copies drift on rotation. junethekey credentials can soft-link: one value, many names, rotate once.
+- 1Password items cannot reference each other — copies drift on rotation. F1 aliases reference one stored value; nested/dynamic soft-links are a planned increment.
 
 ## How it works (target architecture)
 
-```
+```text
 agent --jtk get KEY--> daemon --allow + valid grant--> value (local hot path, <10ms)
                           |
                           ask
@@ -53,6 +58,8 @@ agent --jtk get KEY--> daemon --allow + valid grant--> value (local hot path, <1
 ```
 
 ## Compared to the closest prior art
+
+Target broker comparison; identity, policy, tokens and audit below are not F1 capabilities. See the feature index for current behavior and known gaps.
 
 | | secret-gate | junethekey |
 |---|---|---|
@@ -65,16 +72,25 @@ agent --jtk get KEY--> daemon --allow + valid grant--> value (local hot path, <1
 
 ## Roadmap (feature-sized increments)
 
-- **F1 (shipped)** monolith CLI — vault.enc, aliases, run injection, import/export
-- **F2** policy engine — allow/ask/deny rules, `simulate`/`why`/`test`
-- **F3** daemon + phone approval page + audit chain
-- **F4** scoped tokens (:r/:w, field→vault)
-- **F5** relay (self-hosted push)
-- **P3** MCP server, 1Password adapter
+<!-- features:roadmap:start -->
+Generated from [features/registry.yaml](features/registry.yaml). See the [feature index](features/INDEX.md) for intent, evidence and code/test pointers.
+
+| Milestone | Scope | Feature state |
+|---|---|---|
+| F1 | Local monolith CLI | 27 shipped |
+| F2 | Policy engine | 9 planned |
+| F3 | Local broker and phone approval | 12 planned |
+| F4 | Scoped tokens | 5 planned |
+| F5 | Self-hosted relay | 4 planned |
+
+Unscheduled directions: 7 planned, 11 deferred. Distribution, MCP/adapters, hosted relay and deferred sync/backup are separate keys, not an implied release promise.
+
+Shipped means locally available, not published or fully regression-covered. Partial/manual evidence and known gaps remain explicit in the feature pages.
+<!-- features:roadmap:end -->
 
 ## Contributing
 
-Clear is better than clever. `bun run lint` and `bun test` must pass.
+Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test`, `bun run test:e2e` and `bun run features:check` must pass. Start with [AGENTS.md](AGENTS.md); update registry and prose together, then run `bun run features:generate`.
 
 ## License
 

@@ -1,0 +1,923 @@
+# Navigation/status source. Update feature prose too; generated projections are not edited by hand.
+version: 1
+milestones:
+  - id: F1
+    title: "Local monolith CLI"
+  - id: F2
+    title: "Policy engine"
+  - id: F3
+    title: "Local broker and phone approval"
+  - id: F4
+    title: "Scoped tokens"
+  - id: F5
+    title: "Self-hosted relay"
+features:
+  - key: "global-home"
+    area: "global"
+    title: "Isolated storage root"
+    intent: "Select a per-machine or per-test vault without touching another profile."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#global-home"
+    code: ["src/cli/paths.ts","src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "global-master"
+    area: "global"
+    title: "Per-command master"
+    intent: "Unlock locally without a daemon or a persistent plaintext cache."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#global-master"
+    code: ["src/cli/store.ts","src/cli/cmd-crud.ts","src/cli/cmd-io.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "global-exit"
+    area: "global"
+    title: "CLI exit contract"
+    intent: "Make shell automation distinguish broker failures and child exit codes."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#global-exit"
+    code: ["src/cli/main.ts","src/cli/cmd-run.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "global-crypto"
+    area: "global"
+    title: "Encrypted local vault"
+    intent: "Keep persisted credential values encrypted at rest."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#global-crypto"
+    code: ["src/vault/vault.ts","contracts/vault.ts"]
+    tests: ["src/vault/vault.test.ts","contracts/config.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "global-files"
+    area: "global"
+    title: "Private atomic file writes"
+    intent: "Keep the credential file authoritative without durable value copies."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#global-files"
+    code: ["src/cli/store.ts","src/vault/vault.ts"]
+    tests: ["src/cli/main.test.ts","src/vault/vault.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "help"
+    area: "help"
+    title: "Command discovery"
+    intent: "Find supported CLI syntax without unlocking the vault."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/local-runtime.md#help"
+    code: ["src/cli/main.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "init-master"
+    area: "init"
+    title: "Initial master input"
+    intent: "Create a local encrypted vault using a supplied master."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#init-master"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: ["scripts/e2e.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "init-min8"
+    area: "init"
+    title: "Master length floor"
+    intent: "Reject accidental empty or too-short initial masters."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#init-min8"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "init-guard"
+    area: "init"
+    title: "Initialization guard"
+    intent: "Avoid silently overwriting an existing local profile."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#init-guard"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "set-stdin"
+    area: "set"
+    title: "Piped value storage"
+    intent: "Keep values out of CLI positional arguments."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#set-stdin"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts","scripts/e2e.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "set-autocreate"
+    area: "set"
+    title: "Create missing containers"
+    intent: "Store a credential without separate vault/item setup commands."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#set-autocreate"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "set-addr"
+    area: "set"
+    title: "Field addressing"
+    intent: "Use stable jtk:// addresses across commands and references."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#set-addr"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "get-mask"
+    area: "get"
+    title: "Masked default read"
+    intent: "Inspect a credential without printing its value."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#get-mask"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "get-reveal"
+    area: "get"
+    title: "Explicit value output"
+    intent: "Let a human deliberately read a local value."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#get-reveal"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts","scripts/e2e.ts"]
+    verification: "automated"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "get-subpath"
+    area: "get"
+    title: "JSON dot-path read"
+    intent: "Reuse one structured credential item without copied fields."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#get-subpath"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "ls-lines"
+    area: "ls"
+    title: "Value-free address listing"
+    intent: "Discover available credentials without revealing their values."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#ls-lines"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "ls-json"
+    area: "ls"
+    title: "Machine-readable listing"
+    intent: "Feed discovery into tools and pipelines."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#ls-json"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "rm"
+    area: "rm"
+    title: "Field deletion"
+    intent: "Remove a credential without silently editing a JSON subfield."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#rm"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "alias"
+    area: "alias"
+    title: "Friendly address name"
+    intent: "Reference one stored value under an environment-friendly name."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/credentials.md#alias"
+    code: ["src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/main.test.ts","src/cli/run.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "run-env"
+    area: "run"
+    title: "Named env injection"
+    intent: "Run applications with credentials without printing them to the agent."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/execution.md#run-env"
+    code: ["src/cli/cmd-run.ts","src/cli/cmd-crud.ts","src/cli/store.ts"]
+    tests: ["src/cli/run.test.ts","scripts/e2e.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "run-fromitem"
+    area: "run"
+    title: "Item env spread"
+    intent: "Inject related fields without declaring every alias."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/execution.md#run-fromitem"
+    code: ["src/cli/cmd-run.ts","src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
+    tests: ["src/cli/run.test.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "run-fromenv"
+    area: "run"
+    title: "Reference file injection"
+    intent: "Commit refs.env-style application configuration while resolving secrets only on launch."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/execution.md#run-fromenv"
+    code: ["src/cli/cmd-run.ts","src/cli/cmd-crud.ts","src/cli/store.ts","src/vault/io.ts"]
+    tests: ["src/cli/run.test.ts"]
+    verification: "automated"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "run-noleak"
+    area: "run"
+    title: "Strip inherited master"
+    intent: "Keep the launcher's master variable out of the child environment."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/execution.md#run-noleak"
+    code: ["src/cli/cmd-run.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "run-exitcode"
+    area: "run"
+    title: "Child exit passthrough"
+    intent: "Preserve application failure signals for shell automation."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/execution.md#run-exitcode"
+    code: ["src/cli/cmd-run.ts","src/cli/main.ts"]
+    tests: []
+    verification: "manual"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "io-importenv"
+    area: "io"
+    title: "Import values and refs"
+    intent: "Migrate a small env file into the local vault."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/exchange.md#io-importenv"
+    code: ["src/cli/cmd-io.ts","src/vault/io.ts"]
+    tests: ["src/cli/io.test.ts","scripts/e2e.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "io-exportref"
+    area: "io"
+    title: "Reference-only export"
+    intent: "Share configuration without exporting credential values."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/exchange.md#io-exportref"
+    code: ["src/cli/cmd-io.ts","src/vault/io.ts"]
+    tests: ["src/cli/io.test.ts","scripts/e2e.ts"]
+    verification: "partial"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "io-roundtrip"
+    area: "io"
+    title: "Reference roundtrip"
+    intent: "Keep portable reference configuration byte-stable."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/exchange.md#io-roundtrip"
+    code: ["src/cli/cmd-io.ts","src/vault/io.ts"]
+    tests: ["src/cli/io.test.ts","scripts/e2e.ts"]
+    verification: "automated"
+    depends_on: []
+    milestone: "F1"
+    issues: ["JG-116"]
+  - key: "get-jq"
+    area: "get"
+    title: "Full item-local jq"
+    intent: "Query structured credentials without copying values."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/credentials.md#get-jq"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "get-batch"
+    area: "get"
+    title: "Batch and glob reads"
+    intent: "Ask once for a related batch of credentials."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/credentials.md#get-batch"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "get-stdin"
+    area: "get"
+    title: "Pipeline name selection"
+    intent: "Combine machine-readable discovery with complex external selection."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/credentials.md#get-stdin"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "vault-link"
+    area: "vault"
+    title: "Nested and dynamic links"
+    intent: "Rotate one value and have every reference follow it."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/credentials.md#vault-link"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "vault-history"
+    area: "vault"
+    title: "Vault version history"
+    intent: "Recover mistaken edits locally."
+    surfaces: ["cli","daemon"]
+    status: "deferred"
+    doc: "features/credentials.md#vault-history"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "policy-rules"
+    area: "policy"
+    title: "Ordered policy rules"
+    intent: "Express understandable exceptions to general access rules."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-rules"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "policy-decide"
+    area: "policy"
+    title: "Allow / ask / deny"
+    intent: "Separate automatic use, human approval and refusal."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-decide"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "policy-ttl"
+    area: "policy"
+    title: "Grant lifetime"
+    intent: "Limit how long a human approval stays valid."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-ttl"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "policy-askon"
+    area: "policy"
+    title: "First-use and value-change checks"
+    intent: "Prevent approval drift after rotation or a new requesting principal."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-askon"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "policy-evaluate"
+    area: "policy"
+    title: "Pure evaluator"
+    intent: "Keep live authorization and policy debugging consistent."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-evaluate"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "policy-simulate"
+    area: "policy"
+    title: "Decision simulation"
+    intent: "Preview policy without granting or reading secrets."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-simulate"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["policy-evaluate"]
+    milestone: "F2"
+  - key: "policy-why"
+    area: "policy"
+    title: "Decision explanation"
+    intent: "Explain the current grant and matched policy."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-why"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["policy-evaluate"]
+    milestone: "F2"
+  - key: "policy-test"
+    area: "policy"
+    title: "Policy fixtures"
+    intent: "Regression-test a personal authorization policy."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-test"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["policy-evaluate"]
+    milestone: "F2"
+  - key: "policy-config"
+    area: "policy"
+    title: "Validated policy editing"
+    intent: "Offer a safe writer for principals/settings/rules."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#policy-config"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+  - key: "daemon-socket"
+    area: "daemon"
+    title: "Local broker socket"
+    intent: "Centralize credential release behind authorization."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-socket"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["policy-evaluate"]
+    milestone: "F3"
+  - key: "daemon-principal"
+    area: "daemon"
+    title: "Principal authentication"
+    intent: "Identify agents and human devices without self-declared names."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-principal"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "daemon-grants"
+    area: "daemon"
+    title: "Persistent grant metadata"
+    intent: "Avoid prompting again after a harmless broker restart."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-grants"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "daemon-audit"
+    area: "daemon"
+    title: "Hash-chain audit"
+    intent: "Account for authorized and refused requests without logging values."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-audit"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "daemon-hotpath"
+    area: "daemon"
+    title: "Local authorized fast path"
+    intent: "Keep repeated authorized requests practical."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-hotpath"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "daemon-autolock"
+    area: "daemon"
+    title: "Idle broker locking"
+    intent: "Bound unlock key residency."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/broker.md#daemon-autolock"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F3"
+  - key: "store-sqlite"
+    area: "store"
+    title: "Storage migration seam"
+    intent: "Allow scale-driven persistence changes without changing callers."
+    surfaces: ["daemon"]
+    status: "deferred"
+    doc: "features/broker.md#store-sqlite"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "grant-decay"
+    area: "grant"
+    title: "Grant decay management"
+    intent: "Inspect and revoke long-lived approvals."
+    surfaces: ["cli","daemon","approval-ui"]
+    status: "deferred"
+    doc: "features/broker.md#grant-decay"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "approve-page"
+    area: "approve"
+    title: "Local phone approval"
+    intent: "Let a person control agent requests without cloud deployment."
+    surfaces: ["cli","daemon","approval-ui"]
+    status: "planned"
+    doc: "features/approval.md#approve-page"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["daemon-socket","daemon-principal"]
+    milestone: "F3"
+  - key: "approve-owner"
+    area: "approve"
+    title: "Credential owner routing"
+    intent: "Ask the credential's owner instead of an unrelated approver."
+    surfaces: ["daemon","approval-ui"]
+    status: "planned"
+    doc: "features/approval.md#approve-owner"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["approve-page"]
+    milestone: "F3"
+  - key: "approve-once"
+    area: "approve"
+    title: "One-time retrieval capability"
+    intent: "Separate approval from a replayable value download."
+    surfaces: ["daemon","approval-ui"]
+    status: "planned"
+    doc: "features/approval.md#approve-once"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["approve-page"]
+    milestone: "F3"
+  - key: "approve-touchid"
+    area: "approve"
+    title: "Biometric approval"
+    intent: "Make phone approval deliberate and convenient."
+    surfaces: ["approval-ui"]
+    status: "deferred"
+    doc: "features/approval.md#approve-touchid"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "approve-pwa"
+    area: "approve"
+    title: "Background web notifications"
+    intent: "Approve without keeping the local page in the foreground."
+    surfaces: ["approval-ui","relay"]
+    status: "deferred"
+    doc: "features/approval.md#approve-pwa"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "token-issue"
+    area: "token"
+    title: "Issue scoped tokens"
+    intent: "Preapprove unattended jobs within a bounded scope."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/tokens.md#token-issue"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["daemon-principal","policy-evaluate"]
+    milestone: "F4"
+  - key: "token-scope"
+    area: "token"
+    title: "Field-to-vault scope"
+    intent: "Avoid vault-wide service-account access."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/tokens.md#token-scope"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F4"
+  - key: "token-hash"
+    area: "token"
+    title: "Hashed token storage"
+    intent: "Avoid persisting a reusable token plaintext."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/tokens.md#token-hash"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F4"
+  - key: "token-ttl"
+    area: "token"
+    title: "Arbitrary bounded TTL"
+    intent: "Support both temporary and long-running jobs."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/tokens.md#token-ttl"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F4"
+  - key: "token-revoke"
+    area: "token"
+    title: "Immediate token revocation"
+    intent: "Stop a job's future authorized access."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/tokens.md#token-revoke"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F4"
+  - key: "token-remote"
+    area: "token"
+    title: "Remote broker access"
+    intent: "Use scoped credentials from a trusted remote job."
+    surfaces: ["cli","daemon"]
+    status: "deferred"
+    doc: "features/tokens.md#token-remote"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "relay-selfhosted"
+    area: "relay"
+    title: "Self-hosted relay"
+    intent: "Add off-screen push without relocating credentials."
+    surfaces: ["relay","daemon","approval-ui"]
+    status: "planned"
+    doc: "features/relay.md#relay-selfhosted"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["approve-page"]
+    milestone: "F5"
+  - key: "relay-connection"
+    area: "relay"
+    title: "Outbound relay connection"
+    intent: "Reach approval devices without exposing a local public ingress."
+    surfaces: ["relay","daemon"]
+    status: "planned"
+    doc: "features/relay.md#relay-connection"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["relay-selfhosted"]
+    milestone: "F5"
+  - key: "relay-pairing"
+    area: "relay"
+    title: "Phone pairing"
+    intent: "Bind approval replies to a permitted device."
+    surfaces: ["relay","approval-ui"]
+    status: "planned"
+    doc: "features/relay.md#relay-pairing"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["relay-selfhosted"]
+    milestone: "F5"
+  - key: "relay-ntfy"
+    area: "relay"
+    title: "Notification buttons"
+    intent: "Deliver a genuine push prompt for an approval."
+    surfaces: ["relay","approval-ui"]
+    status: "planned"
+    doc: "features/relay.md#relay-ntfy"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["relay-pairing"]
+    milestone: "F5"
+  - key: "relay-hosted"
+    area: "relay"
+    title: "Hosted relay subscription"
+    intent: "Offer managed approval delivery without operating a relay server."
+    surfaces: ["hosted","relay"]
+    status: "planned"
+    doc: "features/relay.md#relay-hosted"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["relay-selfhosted"]
+  - key: "mcp"
+    area: "mcp"
+    title: "Agent MCP interface"
+    intent: "Let different agent clients discover/request/use credentials."
+    surfaces: ["mcp","daemon"]
+    status: "planned"
+    doc: "features/integrations.md#mcp"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "io-adapter1p"
+    area: "io"
+    title: "1Password backend adapter"
+    intent: "Reuse existing vaults without making an external password manager mandatory."
+    surfaces: ["adapter","daemon"]
+    status: "planned"
+    doc: "features/integrations.md#io-adapter1p"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "sshagent-ttl"
+    area: "sshagent"
+    title: "SSH-agent TTL linkage"
+    intent: "Bound SSH key use to approved access lifetime."
+    surfaces: ["adapter","daemon"]
+    status: "deferred"
+    doc: "features/integrations.md#sshagent-ttl"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "dist-npm"
+    area: "dist"
+    title: "npm distribution"
+    intent: "Install jtk without cloning source."
+    surfaces: ["distribution"]
+    status: "planned"
+    doc: "features/distribution.md#dist-npm"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "dist-compile"
+    area: "dist"
+    title: "Compiled binary artifact"
+    intent: "Run jtk on a VPS without a source checkout."
+    surfaces: ["distribution"]
+    status: "planned"
+    doc: "features/distribution.md#dist-compile"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "dist-quickjs"
+    area: "dist"
+    title: "QuickJS/txiki option"
+    intent: "Keep an alternate small-runtime exit open without investing now."
+    surfaces: ["distribution"]
+    status: "deferred"
+    doc: "features/distribution.md#dist-quickjs"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "dist-microts"
+    area: "dist"
+    title: "MicroTS option"
+    intent: "Record a possible future runtime, not a present dependency."
+    surfaces: ["distribution"]
+    status: "deferred"
+    doc: "features/distribution.md#dist-microts"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "hosted-sync"
+    area: "hosted"
+    title: "Encrypted sync direction"
+    intent: "Explore multi-machine coordination without assuming cloud secret custody."
+    surfaces: ["hosted","daemon"]
+    status: "deferred"
+    doc: "features/hosted.md#hosted-sync"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "hosted-backup"
+    area: "hosted"
+    title: "Encrypted backup direction"
+    intent: "Explore recovery beyond one machine."
+    surfaces: ["hosted","daemon"]
+    status: "deferred"
+    doc: "features/hosted.md#hosted-backup"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+  - key: "io-reveal"
+    area: "io"
+    title: "Explicit plaintext export"
+    intent: "Migrate values deliberately with an auditable authorization boundary."
+    surfaces: ["cli", "daemon"]
+    status: "planned"
+    milestone: "F3"
+    doc: "features/exchange.md#io-reveal"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["daemon-audit"]
