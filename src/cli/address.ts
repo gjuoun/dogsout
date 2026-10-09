@@ -26,6 +26,14 @@ export function formatAddress(a: ParsedAddress): string {
   return `jtk://${a.vault}/${a.item}/${tail}`;
 }
 
+/** Item-level address jtk://<vault>/<item> — used by --from spreading. */
+export function parseItemRef(input: string): Result<{ vault: string; item: string }, string> {
+  if (!input.startsWith("jtk://")) return err(`not a jtk:// address: ${input}`);
+  const parts = input.slice("jtk://".length).split("/").filter((s) => s.length > 0);
+  if (parts.length !== 2) return err("item address must be jtk://<vault>/<item>");
+  return ok({ vault: parts[0] as string, item: parts[1] as string });
+}
+
 /** Resolve a name that may be an alias (config) or a literal jtk:// address. */
 export function resolveName(name: string, aliases: Record<string, string>): Result<string, string> {
   if (name.startsWith("jtk://")) return ok(name);

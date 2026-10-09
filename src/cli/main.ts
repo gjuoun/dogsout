@@ -1,4 +1,5 @@
 import { runAlias, runGet, runInit, runLs, runRm, runSet } from "./cmd-crud.ts";
+import { runRun } from "./cmd-run.ts";
 
 const USAGE = [
   "jtk — the credential broker for AI agents (F1: local monolith)",
@@ -20,6 +21,12 @@ const commands: Record<string, (argv: string[]) => Promise<CmdResult>> = {
   ls: runLs as unknown as (argv: string[]) => Promise<CmdResult>,
   rm: runRm as unknown as (argv: string[]) => Promise<CmdResult>,
   alias: runAlias as unknown as (argv: string[]) => Promise<CmdResult>,
+  run: async (argv: string[]) => {
+    const r = await runRun(argv);
+    if (r.isErr()) return { isErr: true, error: r.error };
+    process.exit(r.value);
+    return { isErr: false };
+  },
 };
 
 if (!cmd || cmd === "help" || cmd === "--help") {
