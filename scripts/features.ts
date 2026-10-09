@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Development-only navigation schema; product runtime contracts remain in contracts/.
 import { readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { err, ok, type Result } from "neverthrow";
 import { z } from "zod";
 
@@ -52,7 +52,7 @@ export function fileReader(root: string): Reader {
 		try {
 			const target = realpathSync(resolve(base, path));
 			const rel = relative(base, target);
-			if (isAbsolute(rel) || rel === ".." || rel.startsWith("../") || !statSync(target).isFile()) return undefined;
+			if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`) || !statSync(target).isFile()) return undefined;
 			return readFileSync(target, "utf8");
 		} catch {
 			return undefined;

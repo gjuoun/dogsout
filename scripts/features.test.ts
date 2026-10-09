@@ -165,6 +165,9 @@ describe("feature registry validation", () => {
 		const root = mkdtempSync(join(tmpdir(), "jtk-doc-root-"));
 		const outside = mkdtempSync(join(tmpdir(), "jtk-doc-outside-"));
 		try {
+			writeFileSync(join(root, "public.md"), "readable");
+			expect(fileReader(root)("public.md")).toBe("readable");
+			expect(fileReader(root)("../outside.md")).toBeUndefined();
 			writeFileSync(join(outside, "private.md"), "not readable");
 			symlinkSync(join(outside, "private.md"), join(root, "escape.md"));
 			expect(fileReader(root)("escape.md")).toBeUndefined();
