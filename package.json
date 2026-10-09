@@ -15,7 +15,8 @@
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test:e2e": "bun scripts/e2e.ts"
 	},
 	"dependencies": {
 		"hash-wasm": "^4.12.0",
