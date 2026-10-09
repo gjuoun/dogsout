@@ -17,6 +17,17 @@ function fail(message: string): Result<never, string> {
 	return err(message);
 }
 
+/** Interactive prompt when no JTK_MASTER and we have a TTY (reads one line, not EOF). */
+async function readMasterInteractive(): Promise<string> {
+	const { createInterface } = await import("node:readline");
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	const answer = await new Promise<string>((resolve) => {
+		rl.question("master password (min 8 chars): ", (a: string) => resolve(a));
+	});
+	rl.close();
+	return answer.trim();
+}
+
 function ctxFromEnv(): Result<Ctx, string> {
 	const master = masterFromEnv();
 	if (master.isErr()) return err(master.error);
@@ -28,7 +39,11 @@ export async function runInit(argv: string[], io: Io = defaultIo): Promise<Resul
 	if ((await Bun.file(configPath(home)).exists()) && !argv.includes("--force")) {
 		return fail(`already initialized: ${configPath(home)} (use --force to reset)`);
 	}
-	const master = process.env.JTK_MASTER ?? (await io.stdin()).trim();
+	let master = process.env.JTK_MASTER;
+	if (!master) {
+		master = process.stdin.isTTY ? await readMasterInteractive() : (await io.stdin()).trim();
+	}
+	if (!master || master.length < 8) return fail("master password too short (min 8)");
 	if (master.length < 8) return fail("master password too short (min 8)");
 	const r = await initFiles(home, master);
 	if (r.isErr()) return err(r.error);
