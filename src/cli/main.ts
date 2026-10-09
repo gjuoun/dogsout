@@ -12,6 +12,7 @@ const USAGE = [
 	"  jtk ls [--json]                       list fields",
 	"  jtk rm <jtk://v/i/field>              remove a field",
 	"  jtk alias <NAME> <jtk://v/i/field>    register an alias in config.json",
+	"  jtk run --env A [--env B] [--from-item jtk://v/i] [--from-env FILE] -- cmd",
 ].join("\n");
 
 const [cmd, ...rest] = process.argv.slice(2);

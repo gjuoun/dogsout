@@ -24,6 +24,10 @@ bun src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alia
 # run a command with secrets injected into its env — values never touch disk or shell history
 bun src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
 
+# item spread (--from-item) and whole .env files (--from-env: literals pass through, jtk:// refs resolve)
+printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only — committable
+bun src/cli/main.ts run --from-env app.env -- ./deploy.sh
+
 # migrate from a .env file (direct values in; jtk:// refs become aliases; op:// lines skipped with a warning)
 printf 'DEEPSEEK_API_KEY=sk-x\nZAI=jtk://dev/zai/api_key\n' > keys.env
 bun src/cli/main.ts import-env keys.env --vault dev --item misc
