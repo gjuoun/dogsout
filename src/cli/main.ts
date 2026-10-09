@@ -1,5 +1,7 @@
+import { err, ok, type Result } from "neverthrow";
 import { runAlias, runGet, runInit, runLs, runRm, runSet } from "./cmd-crud.ts";
 import { runRun } from "./cmd-run.ts";
+import { runExport, runImportEnv } from "./cmd-io.ts";
 
 const USAGE = [
   "jtk — the credential broker for AI agents (F1: local monolith)",
@@ -12,21 +14,16 @@ const USAGE = [
   "  jtk alias <NAME> <jtk://v/i/field>    register an alias in config.json",
 ].join("\n");
 
-type CmdResult = { isErr: boolean; error?: string; value?: string };
 const [cmd, ...rest] = process.argv.slice(2);
-const commands: Record<string, (argv: string[]) => Promise<CmdResult>> = {
-  init: runInit as unknown as (argv: string[]) => Promise<CmdResult>,
-  set: runSet as unknown as (argv: string[]) => Promise<CmdResult>,
-  get: runGet as unknown as (argv: string[]) => Promise<CmdResult>,
-  ls: runLs as unknown as (argv: string[]) => Promise<CmdResult>,
-  rm: runRm as unknown as (argv: string[]) => Promise<CmdResult>,
-  alias: runAlias as unknown as (argv: string[]) => Promise<CmdResult>,
-  run: async (argv: string[]) => {
-    const r = await runRun(argv);
-    if (r.isErr()) return { isErr: true, error: r.error };
-    process.exit(r.value);
-    return { isErr: false };
-  },
+const commands: Record<string, (argv: string[]) => Promise<Result<string, string>>> = {
+  init: runInit,
+  set: runSet,
+  get: runGet,
+  ls: runLs,
+  rm: runRm,
+  alias: runAlias,
+  "import-env": runImportEnv,
+  export: runExport,
 };
 
 if (!cmd || cmd === "help" || cmd === "--help") {
@@ -34,15 +31,23 @@ if (!cmd || cmd === "help" || cmd === "--help") {
   process.exit(cmd ? 0 : 1);
 }
 
-const fn = commands[cmd];
+const fn = cmd === "run"
+  ? async (argv: string[]): Promise<Result<string, string>> => {
+      const r = await runRun(argv);
+      if (r.isErr()) return err(r.error);
+      process.exit(r.value);
+      return ok("");
+    }
+  : commands[cmd];
 if (!fn) {
   console.error(`jtk: unknown command: ${cmd}`);
   process.exit(1);
 }
 
 const r = await fn(rest);
-if (r.isErr) {
+if (r.isErr()) {
   console.error(`jtk: ${r.error}`);
   process.exit(1);
 }
-if (typeof r.value === "string") console.log(r.value);
+const value = r._unsafeUnwrap();
+if (typeof value === "string") console.log(value);
