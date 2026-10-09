@@ -28,6 +28,10 @@
       "public_key": "ed25519:77de…"
     }
   ],
+  "aliases": {
+    "ZAI_API_KEY": "jtk://dev/zai/api_key",
+    "DEEPSEEK_API_KEY": "jtk://dev/deepseek/api_key"
+  },
   "rules": [
     {
       "id": "cron-bulk",
