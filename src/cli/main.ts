@@ -1,6 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { runAlias, runGet, runInit, runLs, runRm, runSet } from "./cmd-crud.ts";
 import { runExport, runImportEnv } from "./cmd-io.ts";
+import { runGrants, runPolicy } from "./cmd-policy.ts";
 import { runRun } from "./cmd-run.ts";
 import { runMap } from "./map.ts";
 
@@ -14,6 +15,8 @@ const USAGE = [
 	"  jtk rm <jtk://v/i/field>              remove a field",
 	"  jtk alias <NAME> <jtk://v/i/field>    register an alias in config.json",
 	"  jtk map <SLOT> <jtk://...|SLOT>       register a map slot (chained refs, --rm to remove)",
+	"  jtk policy simulate|why|test|config  F2 policy surface (rules, previews, safe edits)",
+	"  jtk grants ls|rm                      inspect and revoke approvals (metadata only)",
 	"  jtk run --env A [--env B] [--from-env FILE] -- cmd",
 	"  jtk import-env <f.env> [--vault V] [--item I]  import .env (values in, jtk:// become aliases)",
 	"  jtk export [--format env-ref|json-ref]       export refs only (no values)",
@@ -28,6 +31,8 @@ const commands: Record<string, (argv: string[]) => Promise<Result<string, string
 	rm: runRm,
 	alias: runAlias,
 	map: runMap,
+	policy: runPolicy,
+	grants: runGrants,
 	"import-env": runImportEnv,
 	export: runExport,
 };
