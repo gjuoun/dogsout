@@ -25,7 +25,9 @@ export interface EvaluateInput {
 	now: Date;
 }
 
+/** Bare * matches everything (addresses contain /); otherwise real glob semantics (** crosses separators). */
 function globMatch(pattern: string, text: string): boolean {
+	if (pattern === "*") return true;
 	return new Bun.Glob(pattern).match(text);
 }
 

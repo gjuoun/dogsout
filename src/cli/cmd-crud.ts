@@ -29,7 +29,7 @@ async function readMasterInteractive(): Promise<string> {
 	return answer.trim();
 }
 
-function ctxFromEnv(): Result<Ctx, string> {
+export function ctxFromEnv(): Result<Ctx, string> {
 	const master = masterFromEnv();
 	if (master.isErr()) return err(master.error);
 	return ok({ home: jtkHome(), master: master.value });
@@ -72,6 +72,14 @@ export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result
 	const saved = await saveData(ctxR.value, envelope, data);
 	if (saved.isErr()) return err(saved.error);
 	return ok(`set ${formatAddress(parsed.value)}`);
+}
+
+export async function openDataOnce(
+	ctx: Ctx,
+): Promise<Result<{ data: import("../../contracts/vault.ts").VaultData }, string>> {
+	const opened = await openData(ctx);
+	if (opened.isErr()) return err(opened.error);
+	return ok({ data: opened.value.data });
 }
 
 export async function readValue(name: string): Promise<Result<string, string>> {

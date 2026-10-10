@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Io, runAlias, runInit, runSet } from "./cmd-crud.ts";
 import { runRun } from "./cmd-run.ts";
+import { loadConfig, writeConfig } from "./store.ts";
 
 const MASTER = "run-test-master";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
@@ -16,6 +17,12 @@ beforeAll(async () => {
 	await runInit([], stdinOf(""));
 	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-inject-me"));
 	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+	// F2: run is now a policy surface — allow-all rule keeps these injection-mechanics tests focused
+	const cfg = await loadConfig(home);
+	if (cfg.isErr()) throw new Error(cfg.error);
+	cfg.value.rules = [{ id: "test-allow", principal: "*", resource: "*", decide: "allow" }];
+	const w = await writeConfig(home, cfg.value);
+	if (w.isErr()) throw new Error(w.error);
 });
 
 afterAll(() => {
@@ -25,6 +32,26 @@ afterAll(() => {
 });
 
 describe("jtk run env injection", () => {
+	test("without any rule or grant, run is fail-closed (no channel decides)", async () => {
+		// strip the allow rule for one call
+		const cfg = await loadConfig(home);
+		if (cfg.isErr()) throw new Error(cfg.error);
+		const savedRules = cfg.value.rules;
+		cfg.value.rules = [];
+		const w = await writeConfig(home, cfg.value);
+		if (w.isErr()) throw new Error(w.error);
+		process.env.JTK_APPROVE_HELPER = "/nonexistent/jtk-approve";
+		const r = await runRun(["--env", "ZAI_API_KEY", "--", "sh", "-c", "exit 0"]);
+		delete process.env.JTK_APPROVE_HELPER;
+		if (r.isErr()) expect(r.error).toContain("fail-closed");
+		else throw new Error("expected fail-closed refusal, got exit " + r.value);
+		const restore = await loadConfig(home);
+		if (restore.isErr()) throw new Error(restore.error);
+		restore.value.rules = savedRules;
+		const w2 = await writeConfig(home, restore.value);
+		if (w2.isErr()) throw new Error(w2.error);
+	});
+
 	test("--env ALIAS injects value into child env (exit 0)", async () => {
 		const r = await runRun(["--env", "ZAI_API_KEY", "--", "sh", "-c", 'test "$ZAI_API_KEY" = sk-inject-me']);
 		expect(r.isOk()).toBe(true);

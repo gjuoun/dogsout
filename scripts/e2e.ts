@@ -43,6 +43,16 @@ try {
 		init.code === 0 &&
 		["config.json", "vault.enc"].every((file) => (statSync(join(home1, file)).mode & 0o777) === 0o600);
 	check(privateFiles, "init creates private config and vault (0600)", init.err);
+	// F2: run is a policy surface — e2e homes carry an allow-all rule (ask-path e2e uses a fake approver)
+	await Bun.write(
+		join(home1, "config.json"),
+		JSON.stringify({
+			version: 1,
+			aliases: {},
+			maps: {},
+			rules: [{ id: "e2e-allow", principal: "*", resource: "*", decide: "allow" }],
+		}),
+	);
 	const fixture = join(home1, "fixture.env");
 	await Bun.write(
 		fixture,
