@@ -32,7 +32,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Intent:** Limit how long a human approval stays valid.
 
-**Target:** once/5m/15m/1h/24h/always; always decays (default 30d), rule TTL can be overridden at approval.
+**Target:** once/10m/1h/24h/30d/always (UI six tiers, default 10m) plus a session tier (manifest-only, dies with session end); always = fixed 30d expiry (always_decay configurable); rule TTL can be overridden at approval.
 
 **Acceptance:** Expired and consumed grants cannot be reused.
 
@@ -107,6 +107,42 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 **Target:** config show/set/rule add|rm/principal add|rm/test; schema validation and 0600 atomic writes. F1 still writes aliases through flat commands.
 
 **Acceptance:** Invalid changes leave the previous config intact.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
+### grants-meta
+
+**Intent:** Persist approvals without ever persisting values.
+
+**Target:** grants.json under JTK_HOME stores agent/alias/value_hash/expiry/approved_via with 0600 atomic writes; value_hash mismatch (rotation) invalidates a grant regardless of remaining TTL.
+
+**Acceptance:** Rotating a value invalidates its grant mid-TTL; no secret material ever lands in the store.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
+### session-model
+
+**Intent:** Tie approvals to an agent run instead of loose commands.
+
+**Target:** Session {id, principal, key-set}; an opening manifest invites keys in batch under the session TTL tier; session end revokes every grant bound to it.
+
+**Acceptance:** Grants issued inside a session stop working after session end.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
+### session-resume
+
+**Intent:** Resume an interrupted run without re-asking every key.
+
+**Target:** resume replays the last approval list exactly once — permissions are restored, values are not; the replay list empties after use.
+
+**Acceptance:** A resumed session receives its previously approved keys without prompts, exactly once.
 
 **Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
 

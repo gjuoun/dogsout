@@ -78,12 +78,12 @@ Generated from [features/registry.yaml](features/registry.yaml). See the [featur
 | Milestone | Scope | Feature state |
 |---|---|---|
 | F1 | Local monolith CLI | 26 shipped |
-| F2 | Policy engine | 9 planned |
+| F2 | Policy engine | 16 planned |
 | F3 | Local broker and phone approval | 12 planned |
 | F4 | Scoped tokens | 5 planned |
 | F5 | Self-hosted relay | 4 planned |
 
-Unscheduled directions: 7 planned, 11 deferred. Distribution, MCP/adapters, hosted relay and deferred sync/backup are separate keys, not an implied release promise.
+Unscheduled directions: 6 planned, 11 deferred. Distribution, MCP/adapters, hosted relay and deferred sync/backup are separate keys, not an implied release promise.
 
 Shipped means locally available, not published or fully regression-covered. Partial/manual evidence and known gaps remain explicit in the feature pages.
 <!-- features:roadmap:end -->

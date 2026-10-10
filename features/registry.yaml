@@ -396,6 +396,8 @@ features:
     tests: []
     verification: "none"
     depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "vault-history"
     area: "vault"
     title: "Vault version history"
@@ -515,6 +517,45 @@ features:
     verification: "none"
     depends_on: []
     milestone: "F2"
+  - key: "grants-meta"
+    area: "policy"
+    title: "Metadata-only grant store"
+    intent: "Persist approvals without ever persisting values."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#grants-meta"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "session-model"
+    area: "policy"
+    title: "Session as authorization unit"
+    intent: "Tie approvals to an agent run instead of loose commands."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#session-model"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["grants-meta"]
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "session-resume"
+    area: "policy"
+    title: "One-shot resume replay"
+    intent: "Resume an interrupted run without re-asking every key."
+    surfaces: ["cli","daemon"]
+    status: "planned"
+    doc: "features/policy.md#session-resume"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["session-model"]
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "daemon-socket"
     area: "daemon"
     title: "Local broker socket"
@@ -609,6 +650,45 @@ features:
     tests: []
     verification: "none"
     depends_on: []
+  - key: "ask-contract"
+    area: "approve"
+    title: "Ask decision contract"
+    intent: "One JSON contract shared by every approval channel."
+    surfaces: ["cli","daemon","approval-ui"]
+    status: "planned"
+    doc: "features/approval.md#ask-contract"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "ask-swiftui"
+    area: "approve"
+    title: "SwiftUI approval helper"
+    intent: "Single-person local approval window without a daemon."
+    surfaces: ["approval-ui"]
+    status: "planned"
+    doc: "features/approval.md#ask-swiftui"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["ask-contract"]
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "ask-cli"
+    area: "approve"
+    title: "CLI approval fallback"
+    intent: "Approve from a terminal when no GUI channel exists."
+    surfaces: ["cli"]
+    status: "planned"
+    doc: "features/approval.md#ask-cli"
+    code: []
+    tests: []
+    verification: "none"
+    depends_on: ["ask-contract"]
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "approve-page"
     area: "approve"
     title: "Local phone approval"

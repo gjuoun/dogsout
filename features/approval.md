@@ -64,6 +64,42 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
+### ask-contract
+
+**Intent:** One JSON contract shared by every approval channel.
+
+**Target:** zod schemas in contracts/ask.ts (AskRequest, Decision, TTL tiers, per-key choices) formalize the validated mockup; channels parse and emit only this contract.
+
+**Acceptance:** The mockup decision literals parse and validate; deny carries no key map.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
+### ask-swiftui
+
+**Intent:** Single-person local approval window without a daemon.
+
+**Target:** Stateless SwiftUI helper jtk-approve: jtk writes AskRequest JSON, launches the helper, Decision JSON arrives on stdout, the process exits; closing the window yields deny.
+
+**Acceptance:** approve/deny round-trip through contracts/ask.ts; closed window never approves.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
+### ask-cli
+
+**Intent:** Approve from a terminal when no GUI channel exists.
+
+**Target:** TTY per-key three-state prompt consuming the same AskRequest and emitting the same Decision JSON; non-TTY stdin yields deny (fail-closed).
+
+**Acceptance:** Piped non-interactive stdin refuses to approve.
+
+**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+
+**Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
+
 ## Decisions
 
 [Foundation snapshot](../docs/decisions/0001-foundation.md) records the original rationale, not current status. Do not duplicate its phase labels in new roadmap entries.
