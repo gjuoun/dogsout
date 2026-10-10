@@ -92,6 +92,7 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 
 	const inject: Record<string, string> = {};
 	const refBindings: Array<{ key: string; addr: string }> = [];
+	let sessionClose: (() => Promise<Result<void, string>>) | undefined;
 	// --from-env FILE: .env style — KEY=literal passes through, KEY=jtk://… resolves from vault (through policy).
 	if (fromEnvFile) {
 		let text: string;
@@ -165,6 +166,8 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 					await closeSessionFlow(home, sessionId).catch(() => undefined);
 					return err(invited.error);
 				}
+				const sid: string = sessionId;
+				sessionClose = () => closeSessionFlow(home, sid);
 				for (const [k, v] of Object.entries(invited.value.inject)) inject[k] = v;
 				const approved = invited.value.asked;
 				if (approved.length > 0) {
@@ -211,6 +214,9 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 		stderr: "inherit",
 	});
 	const code = await proc.exited;
+	// session ends with the run: withdraw session grants and drop the record
+	// (a crash leaves them for --resume, which replays once)
+	if (sessionClose) await sessionClose().catch(() => undefined);
 	return ok(code);
 }
 

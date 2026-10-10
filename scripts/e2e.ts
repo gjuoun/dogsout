@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Portable F1 acceptance, migrated from the JG-115 notebook plan.
 // Only fake values and temporary JTK_HOME directories; drives the real CLI.
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,10 +9,15 @@ const REPO = join(import.meta.dir, "..");
 const MASTER = "e2e-master-pass";
 let failures = 0;
 
-async function jtk(home: string, args: string[], stdin = ""): Promise<{ code: number; out: string; err: string }> {
+async function jtk(
+	home: string,
+	args: string[],
+	stdin = "",
+	env: Record<string, string> = {},
+): Promise<{ code: number; out: string; err: string }> {
 	const proc = Bun.spawn([process.execPath, "src/cli/main.ts", ...args], {
 		cwd: REPO,
-		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER },
+		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER, ...env },
 		stdout: "pipe",
 		stderr: "pipe",
 		stdin: "pipe",
@@ -37,6 +42,10 @@ function check(ok: boolean, name: string, detail: string) {
 
 const home1 = mkdtempSync(join(tmpdir(), "jtk-e2e-1-"));
 const home2 = mkdtempSync(join(tmpdir(), "jtk-e2e-2-"));
+const homeAsk = mkdtempSync(join(tmpdir(), "jtk-e2e-ask-"));
+const homeDeny = mkdtempSync(join(tmpdir(), "jtk-e2e-deny-"));
+const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
+const fakeApprover = join(REPO, "src/ask/helper/fake-approve.ts");
 try {
 	const init = await jtk(home1, ["init"]);
 	const privateFiles =
@@ -88,8 +97,91 @@ try {
 		"fresh-home reference roundtrip is byte-identical",
 		exp2.err,
 	);
+
+	// --- F2: ask flow with a fake approval channel driving the real CLI ---
+	const askEnv = { JTK_APPROVE_HELPER: fakeApprover, JTK_PRINCIPAL: "e2e-agent@ci" };
+	const askInit = await jtk(homeAsk, ["init"]);
+	check(askInit.code === 0, "ask-home init", askInit.err);
+	const askSet = await jtk(homeAsk, ["set", "jtk://dev/e2e/token", "--stdin"], "tok-f2-ask");
+	check(askSet.code === 0, "ask-home set token", askSet.err);
+	const askAlias = await jtk(homeAsk, ["alias", "E2E_TOKEN", "jtk://dev/e2e/token"]);
+	check(askAlias.code === 0, "ask-home alias", askAlias.err);
+
+	const approved = await jtk(
+		homeAsk,
+		["run", "--env", "E2E_TOKEN", "--", "sh", "-c", 'test "$E2E_TOKEN" = tok-f2-ask'],
+		"",
+		askEnv,
+	);
+	check(approved.code === 0, "ask: approval injects value into child env", approved.out + approved.err);
+
+	const grantsLs = await jtk(homeAsk, ["grants", "ls", "--principal", "e2e-agent@ci"]);
+	check(
+		grantsLs.code === 0 && grantsLs.out.includes("E2E_TOKEN"),
+		"ask: grant recorded (metadata visible)",
+		grantsLs.out,
+	);
+
+	const second = await jtk(
+		homeAsk,
+		["run", "--env", "E2E_TOKEN", "--", "sh", "-c", 'test "$E2E_TOKEN" = tok-f2-ask'],
+		"",
+		{
+			...askEnv,
+			FAKE_APPROVE_MODE: "deny",
+		},
+	);
+	check(
+		second.code === 0,
+		"ask: live grant skips the window (deny-mode helper never consulted)",
+		second.out + second.err,
+	);
+
+	const denyInit = await jtk(homeDeny, ["init"]);
+	const denySet = await jtk(homeDeny, ["set", "jtk://dev/e2e/token", "--stdin"], "tok-f2-deny");
+	const denyAlias = await jtk(homeDeny, ["alias", "E2E_TOKEN", "jtk://dev/e2e/token"]);
+	const marker = join(homeDeny, "child-ran");
+	const denied = await jtk(homeDeny, ["run", "--env", "E2E_TOKEN", "--", "sh", "-c", "touch " + marker], "", {
+		JTK_APPROVE_HELPER: fakeApprover,
+		FAKE_APPROVE_MODE: "deny",
+		JTK_PRINCIPAL: "e2e-agent@ci",
+	});
+	check(
+		denyInit.code === 0 && denySet.code === 0 && denyAlias.code === 0 && denied.code !== 0 && !existsSync(marker),
+		"deny: fail-closed abort, child never spawned",
+		denied.out + denied.err,
+	);
+
+	const sessInit = await jtk(homeSess, ["init"]);
+	const sessSet = await jtk(homeSess, ["set", "jtk://dev/e2e/token", "--stdin"], "tok-f2-sess");
+	const sessAlias = await jtk(homeSess, ["alias", "E2E_TOKEN", "jtk://dev/e2e/token"]);
+	const manifestPath = join(homeSess, "session.json");
+	await Bun.write(
+		manifestPath,
+		JSON.stringify({ id: "sess_e2e", principal: "e2e-session@ci", groups: [], invites: ["E2E_TOKEN"] }),
+	);
+	const sessRun = await jtk(
+		homeSess,
+		["run", "--session", manifestPath, "--env", "E2E_TOKEN", "--", "sh", "-c", 'test "$E2E_TOKEN" = tok-f2-sess'],
+		"",
+		{ JTK_APPROVE_HELPER: fakeApprover },
+	);
+	check(
+		sessInit.code === 0 && sessSet.code === 0 && sessAlias.code === 0 && sessRun.code === 0,
+		"session: manifest invite approves once, child runs",
+		sessRun.out + sessRun.err,
+	);
+	const sessGrants = await jtk(homeSess, ["grants", "ls"]);
+	check(
+		sessGrants.code === 0 && sessGrants.out.includes("(no live grants)"),
+		"session: end withdraws session grants",
+		sessGrants.out,
+	);
 } finally {
 	rmSync(home1, { recursive: true, force: true });
 	rmSync(home2, { recursive: true, force: true });
+	rmSync(homeAsk, { recursive: true, force: true });
+	rmSync(homeDeny, { recursive: true, force: true });
+	rmSync(homeSess, { recursive: true, force: true });
 }
 if (failures) process.exit(1);
