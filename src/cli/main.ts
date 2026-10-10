@@ -12,7 +12,7 @@ const USAGE = [
 	"  jtk ls [--json]                       list fields",
 	"  jtk rm <jtk://v/i/field>              remove a field",
 	"  jtk alias <NAME> <jtk://v/i/field>    register an alias in config.json",
-	"  jtk run --env A [--env B] [--from-item jtk://v/i] [--from-env FILE] -- cmd",
+	"  jtk run --env A [--env B] [--from-env FILE] -- cmd",
 	"  jtk import-env <f.env> [--vault V] [--item I]  import .env (values in, jtk:// become aliases)",
 	"  jtk export [--format env-ref|json-ref]       export refs only (no values)",
 ].join("\n");

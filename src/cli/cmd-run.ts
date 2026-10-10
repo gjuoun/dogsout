@@ -1,24 +1,20 @@
 import { err, ok, type Result } from "neverthrow";
 import { parseEnvFile } from "../vault/io.ts";
-import { parseItemRef } from "./address.ts";
 import { readValue } from "./cmd-crud.ts";
-import { jtkHome } from "./paths.ts";
-import { masterFromEnv, openData } from "./store.ts";
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** jtk run --env ALIAS [--from-item jtk://v/item] [--from-env FILE] -- cmd args — values go to child env only (spec §5.2). */
+/** jtk run --env ALIAS [--from-env FILE] -- cmd args — values go to child env only (spec §5.2). */
 export async function runRun(argv: string[]): Promise<Result<number, string>> {
 	const sep = argv.indexOf("--");
 	if (sep === -1) {
-		return err("usage: jtk run --env ALIAS [--from-item jtk://v/item] [--from-env FILE] -- <cmd> [args...]");
+		return err("usage: jtk run --env ALIAS [--from-env FILE] -- <cmd> [args...]");
 	}
 	const flagPart = argv.slice(0, sep);
 	const cmd = argv.slice(sep + 1);
 	if (cmd.length === 0) return err("no command after --");
 
 	const names: string[] = [];
-	let from: string | undefined;
 	let fromEnvFile: string | undefined;
 	for (let i = 0; i < flagPart.length; i++) {
 		const a = flagPart[i];
@@ -26,13 +22,10 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 			const n = flagPart[i + 1];
 			if (!n) return err("--env needs an ALIAS name");
 			if (!ENV_NAME.test(n))
-				return err(`--env wants a valid env var name (alias), got: ${n} — addresses go through --from`);
+				return err(
+					`--env wants a valid env var name (alias), got: ${n} — register an alias or use --from-env with jtk:// refs`,
+				);
 			names.push(n);
-			i++;
-		} else if (a === "--from-item" || a === "--from") {
-			const f = flagPart[i + 1];
-			if (!f) return err(`${a} needs an item address (jtk://vault/item)`);
-			from = f;
 			i++;
 		} else if (a === "--from-env") {
 			const f = flagPart[i + 1];
@@ -40,7 +33,9 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 			fromEnvFile = f;
 			i++;
 		} else {
-			return err(`unknown flag: ${a}`);
+			return err(
+				`unknown flag: ${a} — item spread (--from-item) was removed: nested field names are not valid env names; use aliases or --from-env`,
+			);
 		}
 	}
 
@@ -64,19 +59,6 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 			if (v.isErr()) return err(`${r.key}: ${v.error}`);
 			inject[r.key] = v.value;
 		}
-	}
-
-	if (from) {
-		const parsed = parseItemRef(from);
-		if (parsed.isErr()) return err(parsed.error);
-		const m = masterFromEnv();
-		if (m.isErr()) return err(m.error);
-		const opened = await openData({ home: jtkHome(), master: m.value });
-		if (opened.isErr()) return err(opened.error);
-		const { vault, item } = parsed.value;
-		const target = opened.value.data.vaults[vault]?.[item];
-		if (!target) return err(`not found: ${from}`);
-		for (const [f, v] of Object.entries(target.fields)) inject[f] = v;
 	}
 
 	for (const n of names) {

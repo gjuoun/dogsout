@@ -25,7 +25,7 @@ bun src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alia
 # inject secrets into child env without a plaintext cache; the child can still persist values
 bun src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
 
-# item spread (--from-item) and whole .env files (--from-env: literals pass through, jtk:// refs resolve)
+# whole .env files (--from-env: literals pass through, jtk:// refs resolve; item spread --from-item was removed)
 printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only — committable
 bun src/cli/main.ts run --from-env app.env -- ./deploy.sh
 
@@ -77,7 +77,7 @@ Generated from [features/registry.yaml](features/registry.yaml). See the [featur
 
 | Milestone | Scope | Feature state |
 |---|---|---|
-| F1 | Local monolith CLI | 27 shipped |
+| F1 | Local monolith CLI | 26 shipped |
 | F2 | Policy engine | 9 planned |
 | F3 | Local broker and phone approval | 12 planned |
 | F4 | Scoped tokens | 5 planned |

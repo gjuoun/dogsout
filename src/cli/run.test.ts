@@ -31,12 +31,10 @@ describe("jtk run env injection", () => {
 		if (r.isOk()) expect(r.value).toBe(0);
 	});
 
-	test("--from-item jtk://v/item spreads all fields by field name (--from kept as alias)", async () => {
-		const r = await runRun(["--from-item", "jtk://dev/zai", "--", "sh", "-c", 'test "$api_key" = sk-inject-me']);
-		expect(r.isOk()).toBe(true);
-		if (r.isOk()) expect(r.value).toBe(0);
-		const r2 = await runRun(["--from", "jtk://dev/zai", "--", "sh", "-c", "true"]);
-		expect(r2.isOk()).toBe(true);
+	test("--from-item is removed: unknown flag, loud guidance", async () => {
+		const r = await runRun(["--from-item", "jtk://dev/zai", "--", "sh", "-c", "true"]);
+		expect(r.isErr()).toBe(true);
+		if (r.isErr()) expect(r.error).toContain("removed");
 	});
 
 	test("--from-env FILE: literals pass through, jtk:// refs resolve, op:// fails loudly", async () => {
@@ -69,6 +67,6 @@ describe("jtk run env injection", () => {
 	test("address as --env name is rejected with guidance", async () => {
 		const r = await runRun(["--env", "jtk://dev/zai/api_key", "--", "sh", "-c", "exit 0"]);
 		expect(r.isErr()).toBe(true);
-		if (r.isErr()) expect(r.error).toContain("--from");
+		if (r.isErr()) expect(r.error).toContain("--from-env");
 	});
 });

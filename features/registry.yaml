@@ -272,19 +272,6 @@ features:
     depends_on: []
     milestone: "F1"
     issues: ["JG-116"]
-  - key: "run-fromitem"
-    area: "run"
-    title: "Item env spread"
-    intent: "Inject related fields without declaring every alias."
-    surfaces: ["cli"]
-    status: "shipped"
-    doc: "features/execution.md#run-fromitem"
-    code: ["src/cli/cmd-run.ts","src/cli/cmd-crud.ts","src/cli/store.ts","src/cli/address.ts"]
-    tests: ["src/cli/run.test.ts"]
-    verification: "partial"
-    depends_on: []
-    milestone: "F1"
-    issues: ["JG-116"]
   - key: "run-fromenv"
     area: "run"
     title: "Reference file injection"
