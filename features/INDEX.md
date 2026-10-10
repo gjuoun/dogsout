@@ -4,14 +4,14 @@
 
 [Product intent](product.md) · [Architecture](architecture.md) · [Registry](registry.yaml) · [Foundation decisions](../docs/decisions/0001-foundation.md)
 
-Inventory: 80 keys (26 shipped, 43 planned, 11 deferred). Evidence is not implied by implementation status.
+Inventory: 80 keys (42 shipped, 27 planned, 11 deferred). Evidence is not implied by implementation status.
 
 ## Milestones
 
 | ID | Scope | State |
 |---|---|---|
 | F1 | Local monolith CLI | 26 shipped |
-| F2 | Policy engine | 16 planned |
+| F2 | Policy engine | 16 shipped |
 | F3 | Local broker and phone approval | 12 planned |
 | F4 | Scoped tokens | 5 planned |
 | F5 | Self-hosted relay | 4 planned |
@@ -35,9 +35,9 @@ Known key → registry entry → intent/current/target/acceptance → code/tests
 | [approve-page](approval.md#approve-page) | Let a person control agent requests without cloud deployment. | planned / none | approval-ui, cli, daemon |
 | [approve-pwa](approval.md#approve-pwa) | Approve without keeping the local page in the foreground. | deferred / none | approval-ui, relay |
 | [approve-touchid](approval.md#approve-touchid) | Make phone approval deliberate and convenient. | deferred / none | approval-ui |
-| [ask-cli](approval.md#ask-cli) | Approve from a terminal when no GUI channel exists. | planned / none | cli |
-| [ask-contract](approval.md#ask-contract) | One JSON contract shared by every approval channel. | planned / none | approval-ui, cli, daemon |
-| [ask-swiftui](approval.md#ask-swiftui) | Single-person local approval window without a daemon. | planned / none | approval-ui |
+| [ask-cli](approval.md#ask-cli) | Approve from a terminal when no GUI channel exists. | shipped / partial | cli |
+| [ask-contract](approval.md#ask-contract) | One JSON contract shared by every approval channel. | shipped / automated | approval-ui, cli, daemon |
+| [ask-swiftui](approval.md#ask-swiftui) | Single-person local approval window without a daemon. | shipped / partial | approval-ui |
 
 ## daemon
 
@@ -134,18 +134,18 @@ Known key → registry entry → intent/current/target/acceptance → code/tests
 
 | Key | Intent | Status / evidence | Surfaces |
 |---|---|---|---|
-| [grants-meta](policy.md#grants-meta) | Persist approvals without ever persisting values. | planned / none | cli, daemon |
-| [policy-askon](policy.md#policy-askon) | Prevent approval drift after rotation or a new requesting principal. | planned / none | cli, daemon |
-| [policy-config](policy.md#policy-config) | Offer a safe writer for principals/settings/rules. | planned / none | cli, daemon |
-| [policy-decide](policy.md#policy-decide) | Separate automatic use, human approval and refusal. | planned / none | cli, daemon |
-| [policy-evaluate](policy.md#policy-evaluate) | Keep live authorization and policy debugging consistent. | planned / none | cli, daemon |
-| [policy-rules](policy.md#policy-rules) | Express understandable exceptions to general access rules. | planned / none | cli, daemon |
-| [policy-simulate](policy.md#policy-simulate) | Preview policy without granting or reading secrets. | planned / none | cli, daemon |
-| [policy-test](policy.md#policy-test) | Regression-test a personal authorization policy. | planned / none | cli, daemon |
-| [policy-ttl](policy.md#policy-ttl) | Limit how long a human approval stays valid. | planned / none | cli, daemon |
-| [policy-why](policy.md#policy-why) | Explain the current grant and matched policy. | planned / none | cli, daemon |
-| [session-model](policy.md#session-model) | Tie approvals to an agent run instead of loose commands. | planned / none | cli, daemon |
-| [session-resume](policy.md#session-resume) | Resume an interrupted run without re-asking every key. | planned / none | cli, daemon |
+| [grants-meta](policy.md#grants-meta) | Persist approvals without ever persisting values. | shipped / automated | cli, daemon |
+| [policy-askon](policy.md#policy-askon) | Prevent approval drift after rotation or a new requesting principal. | shipped / automated | cli, daemon |
+| [policy-config](policy.md#policy-config) | Offer a safe writer for principals/settings/rules. | shipped / automated | cli, daemon |
+| [policy-decide](policy.md#policy-decide) | Separate automatic use, human approval and refusal. | shipped / automated | cli, daemon |
+| [policy-evaluate](policy.md#policy-evaluate) | Keep live authorization and policy debugging consistent. | shipped / automated | cli, daemon |
+| [policy-rules](policy.md#policy-rules) | Express understandable exceptions to general access rules. | shipped / automated | cli, daemon |
+| [policy-simulate](policy.md#policy-simulate) | Preview policy without granting or reading secrets. | shipped / automated | cli, daemon |
+| [policy-test](policy.md#policy-test) | Regression-test a personal authorization policy. | shipped / automated | cli, daemon |
+| [policy-ttl](policy.md#policy-ttl) | Limit how long a human approval stays valid. | shipped / automated | cli, daemon |
+| [policy-why](policy.md#policy-why) | Explain the current grant and matched policy. | shipped / automated | cli, daemon |
+| [session-model](policy.md#session-model) | Tie approvals to an agent run instead of loose commands. | shipped / automated | cli, daemon |
+| [session-resume](policy.md#session-resume) | Resume an interrupted run without re-asking every key. | shipped / automated | cli, daemon |
 
 ## relay
 
@@ -208,7 +208,7 @@ Known key → registry entry → intent/current/target/acceptance → code/tests
 | Key | Intent | Status / evidence | Surfaces |
 |---|---|---|---|
 | [vault-history](credentials.md#vault-history) | Recover mistaken edits locally. | deferred / none | cli, daemon |
-| [vault-link](credentials.md#vault-link) | Rotate one value and have every reference follow it. | planned / none | cli, daemon |
+| [vault-link](credentials.md#vault-link) | Rotate one value and have every reference follow it. | shipped / automated | cli, daemon |
 
 ## Maintenance
 

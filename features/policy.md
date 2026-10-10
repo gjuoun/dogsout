@@ -12,7 +12,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** A later specific rule overrides an earlier general match.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -24,7 +24,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** deny refuses even a scope-authorized token.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -36,7 +36,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Expired and consumed grants cannot be reused.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -48,7 +48,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Rotation triggers reapproval when configured, even through a link.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -60,7 +60,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Identical input produces identical live and simulated decisions.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -72,7 +72,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Simulation reports match/reason and does not create a grant.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -84,7 +84,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Explain expired/mismatched grants without changing state.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -96,7 +96,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Incorrect policy cases fail with useful reasons.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -108,7 +108,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Invalid changes leave the previous config intact.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -120,7 +120,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Rotating a value invalidates its grant mid-TTL; no secret material ever lands in the store.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -132,7 +132,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Grants issued inside a session stop working after session end.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -144,7 +144,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** A resumed session receives its previously approved keys without prompts, exactly once.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 

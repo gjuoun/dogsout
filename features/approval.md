@@ -72,7 +72,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** The mockup decision literals parse and validate; deny carries no key map.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Automated unit + e2e coverage on temporary homes with fake data (2026-10-10, JG-121); see registry code/tests pointers.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -84,7 +84,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** approve/deny round-trip through contracts/ask.ts; closed window never approves.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Partial — helper spawn, decision contract and fail-closed paths are automated (fake-helper tests, swiftc -O build verified 2026-10-10); Gaps: real-window Touch ID smoke is manual on macOS (CI is linux), not yet executed.
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
@@ -96,7 +96,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Acceptance:** Piped non-interactive stdin refuses to approve.
 
-**Verification:** Not implemented; no runtime test evidence. Open questions remain in the target text; no imaginary code paths are registered.
+**Verification:** Partial — non-TTY fail-closed behavior automated; Gaps: interactive TTY approval path not exercised by automated tests (manual).
 
 **Impact:** Review shared semantics and trust boundaries in architecture.md; historical decisions: ../docs/decisions/0001-foundation.md.
 
