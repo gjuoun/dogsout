@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import { digSubpath, formatAddress, parseAddress, resolveName } from "./address.ts";
+import { digSubpath, formatAddress, parseAddress } from "./address.ts";
+import { resolveToAddress } from "./map.ts";
 import { configPath, jtkHome } from "./paths.ts";
 import { type Ctx, initFiles, loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
 
@@ -78,15 +79,15 @@ export async function readValue(name: string): Promise<Result<string, string>> {
 	if (ctxR.isErr()) return err(ctxR.error);
 	const cfg = await loadConfig(ctxR.value.home);
 	if (cfg.isErr()) return err(cfg.error);
-	const resolved = resolveName(name, cfg.value.aliases);
+	const resolved = resolveToAddress(name, cfg.value);
 	if (resolved.isErr()) return err(resolved.error);
-	const parsed = parseAddress(resolved.value);
+	const parsed = parseAddress(resolved.value.address);
 	if (parsed.isErr()) return err(parsed.error);
 	const opened = await openData(ctxR.value);
 	if (opened.isErr()) return err(opened.error);
 	const { vault, item, field, subpath } = parsed.value;
 	const raw = opened.value.data.vaults[vault]?.[item]?.fields[field];
-	if (raw === undefined) return fail(`not found: ${resolved.value}`);
+	if (raw === undefined) return fail(`not found: ${resolved.value.address}`);
 	return digSubpath(raw, subpath);
 }
 

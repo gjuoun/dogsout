@@ -39,6 +39,8 @@ export const ConfigSchema = z.object({
 	version: z.literal(1),
 	settings: SettingsSchema.optional(),
 	aliases: z.record(z.string(), AddressSchema).default({}),
+	/** Map slots — name -> address or another slot; resolved fresh on every read (vault-link). */
+	maps: z.record(z.string(), z.string()).default({}),
 	principals: z.array(PrincipalSchema).optional(),
 	rules: z.array(RuleSchema).optional(),
 });
