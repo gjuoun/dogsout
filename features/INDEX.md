@@ -4,13 +4,13 @@
 
 [Product intent](product.md) · [Architecture](architecture.md) · [Registry](registry.yaml) · [Foundation decisions](../docs/decisions/0001-foundation.md)
 
-Inventory: 75 keys (27 shipped, 37 planned, 11 deferred). Evidence is not implied by implementation status.
+Inventory: 74 keys (26 shipped, 37 planned, 11 deferred). Evidence is not implied by implementation status.
 
 ## Milestones
 
 | ID | Scope | State |
 |---|---|---|
-| F1 | Local monolith CLI | 27 shipped |
+| F1 | Local monolith CLI | 26 shipped |
 | F2 | Policy engine | 9 planned |
 | F3 | Local broker and phone approval | 12 planned |
 | F4 | Scoped tokens | 5 planned |
@@ -164,7 +164,6 @@ Known key → registry entry → intent/current/target/acceptance → code/tests
 | [run-env](execution.md#run-env) | Run applications with credentials without printing them to the agent. | shipped / partial | cli |
 | [run-exitcode](execution.md#run-exitcode) | Preserve application failure signals for shell automation. | shipped / manual | cli |
 | [run-fromenv](execution.md#run-fromenv) | Commit refs.env-style application configuration while resolving secrets only on launch. | shipped / automated | cli |
-| [run-fromitem](execution.md#run-fromitem) | Inject related fields without declaring every alias. | shipped / partial | cli |
 | [run-noleak](execution.md#run-noleak) | Keep the launcher's master variable out of the child environment. | shipped / manual | cli |
 
 ## set

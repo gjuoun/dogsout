@@ -14,19 +14,7 @@ Status and code/test entry points live in registry.yaml. Section keys are stable
 
 **Verification:** run.test.ts and e2e.ts cover injection and bad names. Gaps: repeated --env and collision precedence lack dedicated regression.
 
-**Impact:** Child behavior is outside jtk's no-persistence guarantees. Precedence: inherited env < from-env < from-item < explicit --env.
-
-### run-fromitem
-
-**Intent:** Inject related fields without declaring every alias.
-
-**Current:** --from-item jtk://vault/item spreads all fields; --from is a compatibility spelling. Field names become variable names.
-
-**Acceptance:** Child observes the item field under its field name.
-
-**Verification:** run.test.ts checks spread and compatibility invocation. Gaps: invalid field names/collisions and old-name value equivalence are not fully exercised.
-
-**Impact:** Shared item addressing/schema; spread overrides from-env entries.
+**Impact:** Child behavior is outside jtk's no-persistence guarantees. Precedence: inherited env < from-env < explicit --env.
 
 ### run-fromenv
 
