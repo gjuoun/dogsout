@@ -95,6 +95,32 @@ describe("precedence", () => {
 		expect(grantUsable(g, "aa11", [], NOW).ok).toBe(false);
 	});
 
+	test("ask_on first-use gates an allow rule until any approval history exists", () => {
+		const allowFirstUse = [rule({ id: "af", decide: "allow", ask_on: ["first-use"] })];
+		const first = evaluate({ ...base, rules: allowFirstUse, grants: [] });
+		expect(first.kind).toBe("ask");
+		expect(first.reason).toContain("first-use");
+		const later = evaluate({
+			...base,
+			rules: allowFirstUse,
+			grants: [grant({ value_hash: "bb22", consumed: true })],
+		});
+		expect(later.kind).toBe("allow");
+	});
+
+	test("ask_on value-changed reasks after rotation, even with history present", () => {
+		const allowWatch = [rule({ id: "aw", decide: "allow", ask_on: ["value-changed"] })];
+		const same = evaluate({ ...base, rules: allowWatch, grants: [grant({})] });
+		expect(same.kind).toBe("allow");
+		const rotated = evaluate({
+			...base,
+			rules: allowWatch,
+			grants: [grant({ value_hash: "old99", consumed: true, expires_at: "2026-10-10T11:00:00.000Z" })],
+		});
+		expect(rotated.kind).toBe("ask");
+		expect(rotated.reason).toContain("value-changed");
+	});
+
 	test("identical input produces an identical verdict (live == simulated)", () => {
 		const input = { ...base, rules: [rule({ id: "r", decide: "allow" })], grants: [grant({})] };
 		expect(evaluate(input)).toEqual(evaluate(input));

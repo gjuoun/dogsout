@@ -50,6 +50,25 @@ export function lastMatchingRule(
 	return found;
 }
 
+/**
+ * ask_on gates an allow rule (policy-askon): "first-use" asks until this principal+alias
+ * has any approval history; "value-changed" asks when history exists with a different
+ * value fingerprint (rotation), even through a link.
+ */
+export function askOnTriggers(
+	rule: Rule,
+	history: Pick<EvaluateInput, "principal" | "alias" | "valueHash"> & { grants: GrantMeta[] },
+): string[] {
+	const askOn = rule.ask_on ?? [];
+	if (askOn.length === 0) return [];
+	const hits: string[] = [];
+	const prior = history.grants.filter((g) => g.principal === history.principal && g.alias === history.alias);
+	if (askOn.includes("first-use") && prior.length === 0) hits.push("first-use");
+	if (askOn.includes("value-changed") && prior.some((g) => g.value_hash !== history.valueHash))
+		hits.push("value-changed");
+	return hits;
+}
+
 /** A grant is usable when not consumed, hash matches (rotation), not expired, and its session (if any) is still open. */
 export function grantUsable(
 	g: GrantMeta,
@@ -98,6 +117,15 @@ export function evaluate(input: EvaluateInput): Verdict {
 	}
 
 	if (rule?.decide === "allow") {
+		const triggers = askOnTriggers(rule, input);
+		if (triggers.length > 0) {
+			return {
+				kind: "ask",
+				via: "rule:" + rule.id,
+				reason: "rule " + rule.id + " asks on " + triggers.join("+"),
+				matchedRule: rule,
+			};
+		}
 		return { kind: "allow", via: "rule:" + rule.id, reason: "allowed by rule " + rule.id, matchedRule: rule };
 	}
 
