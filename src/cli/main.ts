@@ -27,7 +27,7 @@ if (r._tag === "error") {
 	if (c && c.exitCode === 0) {
 		// help flags surface as a zero-exit Exit carrying the help text
 		(c.into === "stderr" ? console.error : console.log)(c.message);
-			process.exit(0);
+		process.exit(0);
 	}
 	console.error(`jtk: ${parseErrorMessage(r.error)}`);
 	process.exit(c ? c.exitCode : 1);
