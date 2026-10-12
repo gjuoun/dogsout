@@ -1,5 +1,6 @@
 import { aliasCommand, getCommand, initCommand, lsCommand, rmCommand, setCommand } from "./cmd-crud.ts";
 import { exportCommand, importEnvCommand } from "./cmd-io.ts";
+import { grantsCommand, policyCommand } from "./cmd-policy.ts";
 import { runCommand } from "./cmd-run.ts";
 import { mapCommand } from "./map.ts";
 
@@ -13,6 +14,8 @@ export const COMMANDS = {
 	alias: aliasCommand(),
 	map: mapCommand(),
 	run: runCommand(),
+	policy: policyCommand(),
+	grants: grantsCommand(),
 	"import-env": importEnvCommand(),
 	export: exportCommand(),
 } as const;
