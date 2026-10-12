@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import { command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import type { Config } from "../../contracts/index.ts";
 import { SessionManifestSchema } from "../../contracts/session.ts";
@@ -17,6 +18,7 @@ import { swiftuiChannel } from "../ask/swiftui.ts";
 import { grantUsable } from "../policy/evaluate.ts";
 import { loadGrants, recordApproval } from "../session/grants.ts";
 import { parseEnvFile } from "../vault/io.ts";
+import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
 import { resolveToAddress } from "./map.ts";
 import { loadConfig } from "./store.ts";
@@ -33,73 +35,44 @@ function askBudgetMs(): number {
 	return Number.isFinite(n) && n > 0 ? n : 120_000;
 }
 
-/** jtk run --env ALIAS [--from-env FILE] [--session MANIFEST] [--resume] -- cmd args (spec §5.2 + F2 ask flow). */
-export async function runRun(argv: string[]): Promise<Result<number, string>> {
-	const sep = argv.indexOf("--");
-	if (sep === -1) {
-		return err(
-			"usage: jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]",
-		);
-	}
-	const flagPart = argv.slice(0, sep);
-	const cmd = argv.slice(sep + 1);
-	if (cmd.length === 0) return err("no command after --");
+interface RunArgs {
+	env: string[];
+	fromEnv?: string;
+	session?: string;
+	resume: boolean;
+	principal?: string;
+	cmd: string[];
+}
 
-	const names: string[] = [];
-	let fromEnvFile: string | undefined;
-	let sessionFile: string | undefined;
-	let resume = false;
-	let principalFlag: string | undefined;
-	for (let i = 0; i < flagPart.length; i++) {
-		const a = flagPart[i];
-		if (a === "--env") {
-			const n = flagPart[i + 1];
-			if (!n) return err("--env needs an ALIAS name");
-			if (!ENV_NAME.test(n))
-				return err(
-					"--env wants a valid env var name (alias), got: " +
-						n +
-						" — register an alias or use --from-env with jtk:// refs",
-				);
-			names.push(n);
-			i++;
-		} else if (a === "--from-env") {
-			const f = flagPart[i + 1];
-			if (!f) return err("--from-env needs a FILE path");
-			fromEnvFile = f;
-			i++;
-		} else if (a === "--session") {
-			const f = flagPart[i + 1];
-			if (!f) return err("--session needs a MANIFEST json path");
-			sessionFile = f;
-			i++;
-		} else if (a === "--resume") {
-			resume = true;
-		} else if (a === "--principal") {
-			const p = flagPart[i + 1];
-			if (!p) return err("--principal needs a NAME");
-			principalFlag = p;
-			i++;
-		} else {
+/** jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] -- cmd args (spec §5.2 + F2 ask flow). */
+async function runCore(a: RunArgs): Promise<Result<number, string>> {
+	// rest() keeps the leading `--` token; the child command starts after it
+	const cmd = a.cmd[0] === "--" ? a.cmd.slice(1) : a.cmd;
+	if (cmd.length === 0) {
+		return err("usage: jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]");
+	}
+	const names = [...a.env];
+	for (const n of a.env) {
+		if (!ENV_NAME.test(n)) {
 			return err(
-				"unknown flag: " +
-					a +
-					" — item spread (--from-item) was removed: nested field names are not valid env names; use aliases or --from-env",
+				"--env wants a valid env var name (alias), got: " +
+					n +
+					" — register an alias or use --from-env with jtk:// refs",
 			);
 		}
 	}
-	if (resume && !sessionFile) return err("--resume requires --session");
+	if (a.resume && !a.session) return err("--resume requires --session");
 
 	const inject: Record<string, string> = {};
 	const refBindings: Array<{ key: string; addr: string }> = [];
 	let sessionClose: (() => Promise<Result<void, string>>) | undefined;
 	// --from-env FILE: .env style — KEY=literal passes through, KEY=jtk://… resolves from vault (through policy).
-	if (fromEnvFile) {
+	if (a.fromEnv) {
 		let text: string;
 		try {
-			text = await Bun.file(fromEnvFile).text();
+			text = await Bun.file(a.fromEnv).text();
 		} catch {
-			return err("cannot read: " + fromEnvFile);
+			return err("cannot read: " + a.fromEnv);
 		}
 		const plan = parseEnvFile(text);
 		if (plan.skipped.length > 0) {
@@ -121,25 +94,25 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 		const opened = await openDataOnce({ home, master });
 		if (opened.isErr()) return err(opened.error);
 
-		const principal = principalFlag ?? principalFromEnv();
+		const principal = a.principal ?? principalFromEnv();
 		const channels = [swiftuiChannel, cliChannel];
 		const budget = askBudgetMs();
 
 		let sessionId: string | undefined;
-		if (sessionFile) {
+		if (a.session) {
 			let raw: unknown;
 			try {
-				raw = JSON.parse(await Bun.file(sessionFile).text());
+				raw = JSON.parse(await Bun.file(a.session).text());
 			} catch {
-				return err("cannot read session manifest: " + sessionFile);
+				return err("cannot read session manifest: " + a.session);
 			}
 			const parsed = SessionManifestSchema.safeParse(raw);
-			if (!parsed.success) return err("invalid session manifest: " + sessionFile);
+			if (!parsed.success) return err("invalid session manifest: " + a.session);
 			const opened2 = await openSessionFlow(home, parsed.data);
 			if (opened2.isErr()) return err(opened2.error);
 			sessionId = parsed.data.id;
 
-			if (resume) {
+			if (a.resume) {
 				const replay = await resumeReplayFlow(home, sessionId);
 				if (replay.isErr()) return err(replay.error);
 				for (const alias of replay.value) {
@@ -148,7 +121,7 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 				}
 			}
 
-			const inviteNames = parsed.data.invites.filter((n) => names.includes(n) || !resume);
+			const inviteNames = parsed.data.invites.filter((n) => names.includes(n) || !a.resume);
 			if (inviteNames.length > 0) {
 				const invited = await prepareRun({
 					home,
@@ -220,7 +193,41 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 	return ok(code);
 }
 
-/** Resume replay: re-create a session grant from the replay list without asking (permissions, not values). */
+export function runCommand() {
+	return withMeta(
+		command({
+			name: "run",
+				description: "inject resolved credentials into a child process environment",
+				args: {
+					env: multioption({ long: "env", type: string, description: "alias to inject (repeatable)" }),
+					fromEnv: option({ long: "from-env", type: optional(string), description: "refs .env file" }),
+					session: option({ long: "session", type: optional(string), description: "session manifest json path" }),
+					resume: flag({ long: "resume", description: "replay the last approval list exactly once (needs --session)" }),
+					principal: option({ long: "principal", type: optional(string), description: "requesting principal name" }),
+					cmd: rest({ displayName: "cmd", description: "child command after --" }),
+				},
+			handler: runCore,
+		}),
+		{
+			reads: ["vault", "config", "grants", "sessions"],
+			writes: ["grants", "sessions"],
+			env: ["JTK_HOME", "JTK_MASTER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
+		},
+	);
+}
+
+export async function runRun(argv: string[]): Promise<Result<number, string>> {
+	// loud guidance for the removed item-spread flag, kept ahead of generic parse errors
+	if (argv.includes("--from-item")) {
+		return err(
+			"unknown flag: --from-item — item spread (--from-item) was removed: " +
+				"nested field names are not valid env names; use aliases or --from-env",
+		);
+	}
+	return runJtk<number>(runCommand(), argv);
+}
+
+	/** Resume replay: re-create a session grant from the replay list without asking (permissions, not values). */
 async function reGrantForReplay(
 	home: string,
 	cfg: Config,
