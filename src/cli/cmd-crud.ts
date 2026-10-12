@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import { digSubpath, formatAddress, parseAddress, resolveName } from "./address.ts";
+import { digSubpath, formatAddress, parseAddress } from "./address.ts";
+import { resolveToAddress } from "./map.ts";
 import { configPath, jtkHome } from "./paths.ts";
 import { type Ctx, initFiles, loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
 
@@ -28,7 +29,7 @@ async function readMasterInteractive(): Promise<string> {
 	return answer.trim();
 }
 
-function ctxFromEnv(): Result<Ctx, string> {
+export function ctxFromEnv(): Result<Ctx, string> {
 	const master = masterFromEnv();
 	if (master.isErr()) return err(master.error);
 	return ok({ home: jtkHome(), master: master.value });
@@ -73,20 +74,28 @@ export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result
 	return ok(`set ${formatAddress(parsed.value)}`);
 }
 
+export async function openDataOnce(
+	ctx: Ctx,
+): Promise<Result<{ data: import("../../contracts/vault.ts").VaultData }, string>> {
+	const opened = await openData(ctx);
+	if (opened.isErr()) return err(opened.error);
+	return ok({ data: opened.value.data });
+}
+
 export async function readValue(name: string): Promise<Result<string, string>> {
 	const ctxR = ctxFromEnv();
 	if (ctxR.isErr()) return err(ctxR.error);
 	const cfg = await loadConfig(ctxR.value.home);
 	if (cfg.isErr()) return err(cfg.error);
-	const resolved = resolveName(name, cfg.value.aliases);
+	const resolved = resolveToAddress(name, cfg.value);
 	if (resolved.isErr()) return err(resolved.error);
-	const parsed = parseAddress(resolved.value);
+	const parsed = parseAddress(resolved.value.address);
 	if (parsed.isErr()) return err(parsed.error);
 	const opened = await openData(ctxR.value);
 	if (opened.isErr()) return err(opened.error);
 	const { vault, item, field, subpath } = parsed.value;
 	const raw = opened.value.data.vaults[vault]?.[item]?.fields[field];
-	if (raw === undefined) return fail(`not found: ${resolved.value}`);
+	if (raw === undefined) return fail(`not found: ${resolved.value.address}`);
 	return digSubpath(raw, subpath);
 }
 

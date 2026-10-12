@@ -24,6 +24,7 @@ export const PrincipalSchema = z.object({
 	public_key: z.string().optional(),
 });
 
+export type Principal = z.infer<typeof PrincipalSchema>;
 export const RuleSchema = z.object({
 	id: z.string(),
 	principal: z.string(),
@@ -38,9 +39,13 @@ export const ConfigSchema = z.object({
 	version: z.literal(1),
 	settings: SettingsSchema.optional(),
 	aliases: z.record(z.string(), AddressSchema).default({}),
+	/** Map slots — name -> address or another slot; resolved fresh on every read (vault-link). */
+	maps: z.record(z.string(), z.string()).default({}),
 	principals: z.array(PrincipalSchema).optional(),
 	rules: z.array(RuleSchema).optional(),
 });
+export type Rule = z.infer<typeof RuleSchema>;
+export type Settings = z.infer<typeof SettingsSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 /** Parse and validate; first schema error as a plain message (boundary = plain data). */

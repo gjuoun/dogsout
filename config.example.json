@@ -32,6 +32,10 @@
 		"ZAI_API_KEY": "jtk://dev/zai/api_key",
 		"DEEPSEEK_API_KEY": "jtk://dev/deepseek/api_key"
 	},
+	"maps": {
+		"llm": "jtk://dev/zai/api_key",
+		"zai": "ZAI_API_KEY"
+	},
 	"rules": [
 		{
 			"id": "cron-bulk",

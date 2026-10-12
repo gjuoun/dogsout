@@ -390,12 +390,14 @@ features:
     title: "Nested and dynamic links"
     intent: "Rotate one value and have every reference follow it."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/credentials.md#vault-link"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/cli/map.ts"]
+    tests: ["src/cli/map.test.ts"]
+    verification: "automated"
     depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "vault-history"
     area: "vault"
     title: "Vault version history"
@@ -412,109 +414,157 @@ features:
     title: "Ordered policy rules"
     intent: "Express understandable exceptions to general access rules."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-rules"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/policy/evaluate.ts"]
+    tests: ["src/policy/evaluate.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-decide"
     area: "policy"
     title: "Allow / ask / deny"
     intent: "Separate automatic use, human approval and refusal."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-decide"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/policy/evaluate.ts"]
+    tests: ["src/policy/evaluate.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-ttl"
     area: "policy"
     title: "Grant lifetime"
     intent: "Limit how long a human approval stays valid."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-ttl"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/policy/ttl.ts","src/policy/evaluate.ts"]
+    tests: ["src/policy/ttl.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-askon"
     area: "policy"
     title: "First-use and value-change checks"
     intent: "Prevent approval drift after rotation or a new requesting principal."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-askon"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/policy/evaluate.ts"]
+    tests: ["src/policy/evaluate.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-evaluate"
     area: "policy"
     title: "Pure evaluator"
     intent: "Keep live authorization and policy debugging consistent."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-evaluate"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/policy/evaluate.ts"]
+    tests: ["src/policy/evaluate.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-simulate"
     area: "policy"
     title: "Decision simulation"
     intent: "Preview policy without granting or reading secrets."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-simulate"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/cli/cmd-policy.ts"]
+    tests: ["src/cli/policy.test.ts"]
+    verification: "automated"
     depends_on: ["policy-evaluate"]
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-why"
     area: "policy"
     title: "Decision explanation"
     intent: "Explain the current grant and matched policy."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-why"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/cli/cmd-policy.ts"]
+    tests: ["src/cli/policy.test.ts"]
+    verification: "automated"
     depends_on: ["policy-evaluate"]
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-test"
     area: "policy"
     title: "Policy fixtures"
     intent: "Regression-test a personal authorization policy."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-test"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/cli/cmd-policy.ts"]
+    tests: ["src/cli/policy.test.ts"]
+    verification: "automated"
     depends_on: ["policy-evaluate"]
     milestone: "F2"
+    issues: ["JG-121"]
   - key: "policy-config"
     area: "policy"
     title: "Validated policy editing"
     intent: "Offer a safe writer for principals/settings/rules."
     surfaces: ["cli","daemon"]
-    status: "planned"
+    status: "shipped"
     doc: "features/policy.md#policy-config"
-    code: []
-    tests: []
-    verification: "none"
+    code: ["src/cli/cmd-policy.ts"]
+    tests: ["src/cli/policy.test.ts"]
+    verification: "automated"
     depends_on: []
     milestone: "F2"
+    issues: ["JG-121"]
+  - key: "grants-meta"
+    area: "policy"
+    title: "Metadata-only grant store"
+    intent: "Persist approvals without ever persisting values."
+    surfaces: ["cli","daemon"]
+    status: "shipped"
+    doc: "features/policy.md#grants-meta"
+    code: ["src/session/grants.ts","contracts/grant.ts"]
+    tests: ["src/session/session.test.ts"]
+    verification: "automated"
+    depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "session-model"
+    area: "policy"
+    title: "Session as authorization unit"
+    intent: "Tie approvals to an agent run instead of loose commands."
+    surfaces: ["cli","daemon"]
+    status: "shipped"
+    doc: "features/policy.md#session-model"
+    code: ["src/session/session.ts","src/ask/flow.ts"]
+    tests: ["src/session/session.test.ts"]
+    verification: "automated"
+    depends_on: ["grants-meta"]
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "session-resume"
+    area: "policy"
+    title: "One-shot resume replay"
+    intent: "Resume an interrupted run without re-asking every key."
+    surfaces: ["cli","daemon"]
+    status: "shipped"
+    doc: "features/policy.md#session-resume"
+    code: ["src/session/session.ts","src/cli/cmd-run.ts"]
+    tests: ["src/session/session.test.ts"]
+    verification: "automated"
+    depends_on: ["session-model"]
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "daemon-socket"
     area: "daemon"
     title: "Local broker socket"
@@ -609,6 +659,45 @@ features:
     tests: []
     verification: "none"
     depends_on: []
+  - key: "ask-contract"
+    area: "approve"
+    title: "Ask decision contract"
+    intent: "One JSON contract shared by every approval channel."
+    surfaces: ["cli","daemon","approval-ui"]
+    status: "shipped"
+    doc: "features/approval.md#ask-contract"
+    code: ["contracts/ask.ts"]
+    tests: ["contracts/ask.test.ts"]
+    verification: "automated"
+    depends_on: []
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "ask-swiftui"
+    area: "approve"
+    title: "SwiftUI approval helper"
+    intent: "Single-person local approval window without a daemon."
+    surfaces: ["approval-ui"]
+    status: "shipped"
+    doc: "features/approval.md#ask-swiftui"
+    code: ["src/ask/swiftui.ts","src/ask/helper/jtk-approve.swift"]
+    tests: ["src/ask/flow.test.ts"]
+    verification: "partial"
+    depends_on: ["ask-contract"]
+    milestone: "F2"
+    issues: ["JG-121"]
+  - key: "ask-cli"
+    area: "approve"
+    title: "CLI approval fallback"
+    intent: "Approve from a terminal when no GUI channel exists."
+    surfaces: ["cli"]
+    status: "shipped"
+    doc: "features/approval.md#ask-cli"
+    code: ["src/ask/cli.ts"]
+    tests: ["src/ask/cli.test.ts"]
+    verification: "partial"
+    depends_on: ["ask-contract"]
+    milestone: "F2"
+    issues: ["JG-121"]
   - key: "approve-page"
     area: "approve"
     title: "Local phone approval"
