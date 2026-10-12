@@ -311,7 +311,7 @@ export function policyCommand() {
 	return withMeta(
 		subcommands({
 			name: "policy",
-			description: "F2 policy surface: preview, explain and regression-test decisions; safe config edits",
+			description: "preview, explain and regression-test policy decisions; safe config edits",
 			cmds: {
 				simulate: command({
 					name: "simulate",
