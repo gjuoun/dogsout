@@ -1,9 +1,9 @@
 import { command, option, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
+import { formatEnvRef, formatJsonRef, parseEnvFile } from "../vault/io.ts";
 import { runJtk, withMeta } from "./cmd.ts";
 import { jtkHome } from "./paths.ts";
 import { loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
-import { formatEnvRef, formatJsonRef, parseEnvFile } from "../vault/io.ts";
 
 export function importEnvCommand() {
 	return withMeta(
@@ -12,8 +12,18 @@ export function importEnvCommand() {
 			description: "import a .env file: literal values into the vault, jtk:// refs become aliases",
 			args: {
 				file: positional({ type: string, displayName: "file.env" }),
-				vault: option({ long: "vault", type: string, defaultValue: "imported", description: "target vault (default imported)" }),
-				item: option({ long: "item", type: string, defaultValue: "misc", description: "target item (default misc)" }),
+				vault: option({
+					long: "vault",
+					type: string,
+					defaultValue: () => "imported",
+					description: "target vault (default imported)",
+				}),
+				item: option({
+					long: "item",
+					type: string,
+					defaultValue: () => "misc",
+					description: "target item (default misc)",
+				}),
 			},
 			handler: async ({ file, vault, item }): Promise<Result<string, string>> => {
 				let text: string;
@@ -65,7 +75,12 @@ export function exportCommand() {
 			name: "export",
 			description: "export aliases as references only (never values)",
 			args: {
-					format: option({ long: "format", type: string, defaultValue: "env-ref", description: "env-ref | json-ref" }),
+				format: option({
+					long: "format",
+					type: string,
+					defaultValue: () => "env-ref",
+					description: "env-ref | json-ref",
+				}),
 			},
 			handler: async ({ format }): Promise<Result<string, string>> => {
 				if (format !== "env-ref" && format !== "json-ref")

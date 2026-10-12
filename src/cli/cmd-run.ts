@@ -1,5 +1,5 @@
 import { hostname } from "node:os";
-import { command, flag, multioption, option, optional, rest, string } from "cmd-ts";
+import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import type { Config } from "../../contracts/index.ts";
 import { SessionManifestSchema } from "../../contracts/session.ts";
@@ -37,10 +37,10 @@ function askBudgetMs(): number {
 
 interface RunArgs {
 	env: string[];
-	fromEnv?: string;
-	session?: string;
+	fromEnv?: string | undefined;
+	session?: string | undefined;
 	resume: boolean;
-	principal?: string;
+	principal?: string | undefined;
 	cmd: string[];
 }
 
@@ -49,7 +49,9 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 	// rest() keeps the leading `--` token; the child command starts after it
 	const cmd = a.cmd[0] === "--" ? a.cmd.slice(1) : a.cmd;
 	if (cmd.length === 0) {
-		return err("usage: jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]");
+		return err(
+			"usage: jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]",
+		);
 	}
 	const names = [...a.env];
 	for (const n of a.env) {
@@ -197,15 +199,15 @@ export function runCommand() {
 	return withMeta(
 		command({
 			name: "run",
-				description: "inject resolved credentials into a child process environment",
-				args: {
-					env: multioption({ long: "env", type: string, description: "alias to inject (repeatable)" }),
-					fromEnv: option({ long: "from-env", type: optional(string), description: "refs .env file" }),
-					session: option({ long: "session", type: optional(string), description: "session manifest json path" }),
-					resume: flag({ long: "resume", description: "replay the last approval list exactly once (needs --session)" }),
-					principal: option({ long: "principal", type: optional(string), description: "requesting principal name" }),
-					cmd: rest({ displayName: "cmd", description: "child command after --" }),
-				},
+			description: "inject resolved credentials into a child process environment",
+			args: {
+				env: multioption({ long: "env", type: array(string), description: "alias to inject (repeatable)" }),
+				fromEnv: option({ long: "from-env", type: optional(string), description: "refs .env file" }),
+				session: option({ long: "session", type: optional(string), description: "session manifest json path" }),
+				resume: flag({ long: "resume", description: "replay the last approval list exactly once (needs --session)" }),
+				principal: option({ long: "principal", type: optional(string), description: "requesting principal name" }),
+				cmd: rest({ displayName: "cmd", description: "child command after --" }),
+			},
 			handler: runCore,
 		}),
 		{
@@ -227,7 +229,7 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 	return runJtk<number>(runCommand(), argv);
 }
 
-	/** Resume replay: re-create a session grant from the replay list without asking (permissions, not values). */
+/** Resume replay: re-create a session grant from the replay list without asking (permissions, not values). */
 async function reGrantForReplay(
 	home: string,
 	cfg: Config,

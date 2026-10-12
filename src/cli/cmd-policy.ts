@@ -1,4 +1,4 @@
-import { command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
+import { array, command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import type { Config } from "../../contracts/index.ts";
 import { PrincipalSchema, RuleSchema, SettingsSchema } from "../../contracts/index.ts";
@@ -28,7 +28,11 @@ async function activeSessionIds(home: string): Promise<string[]> {
 }
 
 /** Preview decisions for aliases — same evaluator as live, nothing granted, nothing revealed. */
-async function simulateCore(a: { principal: string; group: string[]; alias: string[] }): Promise<Result<string, string>> {
+async function simulateCore(a: {
+	principal: string;
+	group: string[];
+	alias: string[];
+}): Promise<Result<string, string>> {
 	const ac = await ctxAndConfig();
 	if (ac.isErr()) return err(ac.error);
 	const { ctx, cfg } = ac.value;
@@ -90,11 +94,11 @@ async function whyCore(a: { alias: string; principal: string }): Promise<Result<
 		alias: a.alias,
 		address: resolved.value.address,
 		valueHash,
-			rules: cfg.rules ?? [],
-			grants: grants.value.grants,
-			defaultDecision: cfg.settings?.default_decision ?? "ask",
-			activeSessions: await activeSessionIds(ctx.home),
-			now: new Date(),
+		rules: cfg.rules ?? [],
+		grants: grants.value.grants,
+		defaultDecision: cfg.settings?.default_decision ?? "ask",
+		activeSessions: await activeSessionIds(ctx.home),
+		now: new Date(),
 	});
 	const lines = [a.alias + ": " + v.kind + "  [" + v.via + "] " + v.reason];
 	if (v.grant) {
@@ -247,61 +251,124 @@ async function principalRmCore(a: { name: string }): Promise<Result<string, stri
 	return ok("principal " + a.name + " removed");
 }
 
-function configCommand() {
+// ---- leaf command factories (exported so commands.ts can expose the tree for the map) ----
+
+export function simulateCommand() {
+	return command({
+		name: "simulate",
+		description: "preview decisions for aliases (nothing granted, nothing revealed)",
+		args: {
+			principal: option({
+				long: "principal",
+				type: string,
+				defaultValue: () => "cli@simulate",
+				description: "requesting principal",
+			}),
+			group: multioption({ long: "group", type: array(string), description: "principal group (repeatable)" }),
+			alias: multioption({
+				long: "alias",
+				type: array(string),
+				description: "alias to preview (repeatable; default all)",
+			}),
+		},
+		handler: simulateCore,
+	});
+}
+
+export function whyCommand() {
+	return command({
+		name: "why",
+		description: "explain the current decision for one alias",
+		args: {
+			alias: option({ long: "alias", type: string, description: "alias to explain" }),
+			principal: option({
+				long: "principal",
+				type: string,
+				defaultValue: () => "cli@simulate",
+				description: "requesting principal",
+			}),
+		},
+		handler: whyCore,
+	});
+}
+
+export function policyTestCommand() {
+	return command({
+		name: "test",
+		description: "run decision fixtures from a cases json",
+		args: { file: positional({ type: string, displayName: "cases.json" }) },
+		handler: policyTestCore,
+	});
+}
+
+export function configShowCommand() {
+	return command({ name: "show", description: "print the current config json", args: {}, handler: configShow });
+}
+
+export function configSetCommand() {
+	return command({
+		name: "set",
+		description: "set one settings key (default_decision, always_decay)",
+		args: {
+			key: positional({ type: string, displayName: "key" }),
+			value: positional({ type: string, displayName: "value" }),
+		},
+		handler: configSetCore,
+	});
+}
+
+export function ruleAddCommand() {
+	return command({
+		name: "add",
+		description: "append a rule json (last-match-wins)",
+		args: { json: positional({ type: string, displayName: "<json>" }) },
+		handler: ruleAddCore,
+	});
+}
+
+export function ruleRmCommand() {
+	return command({
+		name: "rm",
+		description: "remove a rule by id",
+		args: { id: positional({ type: string, displayName: "id" }) },
+		handler: ruleRmCore,
+	});
+}
+
+export function principalAddCommand() {
+	return command({
+		name: "add",
+		description: "append a principal json",
+		args: { json: positional({ type: string, displayName: "<json>" }) },
+		handler: principalAddCore,
+	});
+}
+
+export function principalRmCommand() {
+	return command({
+		name: "rm",
+		description: "remove a principal by name",
+		args: { name: positional({ type: string, displayName: "name" }) },
+		handler: principalRmCore,
+	});
+}
+
+export function configCommand() {
 	return subcommands({
 		name: "config",
 		description: "inspect and safely edit policy settings, rules and principals",
 		cmds: {
-			show: command({
-				name: "show",
-				description: "print the current config json",
-				args: {},
-				handler: configShow,
-			}),
-			set: command({
-				name: "set",
-				description: "set one settings key (default_decision, always_decay)",
-				args: {
-					key: positional({ type: string, displayName: "key" }),
-					value: positional({ type: string, displayName: "value" }),
-				},
-				handler: configSetCore,
-			}),
+			show: configShowCommand(),
+			set: configSetCommand(),
 			rule: subcommands({
 				name: "rule",
 				description: "add or remove access rules",
-				cmds: {
-					add: command({
-						name: "add",
-						description: "append a rule json (last-match-wins)",
-						args: { json: positional({ type: string, displayName: "<json>" }) },
-						handler: ruleAddCore,
-					}),
-					rm: command({
-						name: "rm",
-						description: "remove a rule by id",
-						args: { id: positional({ type: string, displayName: "id" }) },
-						handler: ruleRmCore,
-					}),
-				},
+				cmds: { add: ruleAddCommand(), rm: ruleRmCommand() },
 			}),
 			principal: subcommands({
 				name: "principal",
 				description: "add or remove principals",
-				cmds: {
-					add: command({
-						name: "add",
-						description: "append a principal json",
-						args: { json: positional({ type: string, displayName: "<json>" }) },
-						handler: principalAddCore,
-					}),
-					rm: command({
-						name: "rm",
-						description: "remove a principal by name",
-						args: { name: positional({ type: string, displayName: "name" }) },
-						handler: principalRmCore,
-					}),
-				},
+				cmds: { add: principalAddCommand(), rm: principalRmCommand() },
 			}),
 		},
 	});
@@ -313,41 +380,9 @@ export function policyCommand() {
 			name: "policy",
 			description: "preview, explain and regression-test policy decisions; safe config edits",
 			cmds: {
-				simulate: command({
-					name: "simulate",
-					description: "preview decisions for aliases (nothing granted, nothing revealed)",
-					args: {
-						principal: option({
-							long: "principal",
-							type: string,
-							defaultValue: "cli@simulate",
-							description: "requesting principal",
-						}),
-						group: multioption({ long: "group", type: string, description: "principal group (repeatable)" }),
-						alias: multioption({ long: "alias", type: string, description: "alias to preview (repeatable; default all)" }),
-					},
-					handler: simulateCore,
-				}),
-				why: command({
-					name: "why",
-					description: "explain the current decision for one alias",
-					args: {
-						alias: option({ long: "alias", type: string, description: "alias to explain" }),
-						principal: option({
-							long: "principal",
-							type: string,
-							defaultValue: "cli@simulate",
-							description: "requesting principal",
-						}),
-					},
-					handler: whyCore,
-				}),
-				test: command({
-					name: "test",
-					description: "run decision fixtures from a cases json",
-					args: { file: positional({ type: string, displayName: "cases.json" }) },
-					handler: policyTestCore,
-				}),
+				simulate: simulateCommand(),
+				why: whyCommand(),
+				test: policyTestCommand(),
 				config: configCommand(),
 			},
 		}),
@@ -359,7 +394,7 @@ export async function runPolicy(argv: string[]): Promise<Result<string, string>>
 	return runJtk<string>(policyCommand(), argv);
 }
 
-async function grantsLsCore(a: { principal?: string }): Promise<Result<string, string>> {
+async function grantsLsCore(a: { principal?: string | undefined }): Promise<Result<string, string>> {
 	const file = await loadGrants(jtkHome());
 	if (file.isErr()) return err(file.error);
 	const active = await activeSessionIds(jtkHome());
@@ -377,7 +412,7 @@ async function grantsLsCore(a: { principal?: string }): Promise<Result<string, s
 	return ok(rows.length > 0 ? rows.join("\n") : "(no live grants)");
 }
 
-async function grantsRmCore(a: { alias: string; principal?: string }): Promise<Result<string, string>> {
+async function grantsRmCore(a: { alias: string; principal?: string | undefined }): Promise<Result<string, string>> {
 	const grants = await loadGrants(jtkHome());
 	if (grants.isErr()) return err(grants.error);
 	const targets = grants.value.grants.filter(
@@ -393,28 +428,33 @@ async function grantsRmCore(a: { alias: string; principal?: string }): Promise<R
 	return ok("revoked " + removed + " grant(s) for " + a.alias + " — next request re-asks");
 }
 
+export function grantsLsCommand() {
+	return command({
+		name: "ls",
+		description: "list live grants",
+		args: { principal: option({ long: "principal", type: optional(string), description: "filter by principal" }) },
+		handler: grantsLsCore,
+	});
+}
+
+export function grantsRmCommand() {
+	return command({
+		name: "rm",
+		description: "revoke grants for an alias",
+		args: {
+			alias: positional({ type: string, displayName: "ALIAS" }),
+			principal: option({ long: "principal", type: optional(string), description: "filter by principal" }),
+		},
+		handler: grantsRmCore,
+	});
+}
+
 export function grantsCommand() {
 	return withMeta(
 		subcommands({
 			name: "grants",
 			description: "inspect and revoke approvals (metadata only, never values)",
-			cmds: {
-				ls: command({
-					name: "ls",
-					description: "list live grants",
-					args: { principal: option({ long: "principal", type: optional(string), description: "filter by principal" }) },
-					handler: grantsLsCore,
-				}),
-				rm: command({
-					name: "rm",
-					description: "revoke grants for an alias",
-					args: {
-						alias: positional({ type: string, displayName: "ALIAS" }),
-						principal: option({ long: "principal", type: optional(string), description: "filter by principal" }),
-							},
-					handler: grantsRmCore,
-				}),
-			},
+			cmds: { ls: grantsLsCommand(), rm: grantsRmCommand() },
 		}),
 		{ reads: ["grants", "sessions"], writes: ["grants"], env: ["JTK_HOME"] },
 	);

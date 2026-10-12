@@ -27,8 +27,8 @@ export function resolveToAddress(name: string, cfg: Pick<Config, "aliases" | "ma
 		const mapTarget = cfg.maps[cursor];
 		if (mapTarget !== undefined) {
 			if (mapTarget.startsWith("jtk://")) {
-					chain.push(mapTarget);
-					return ok({ address: mapTarget, chain });
+				chain.push(mapTarget);
+				return ok({ address: mapTarget, chain });
 			}
 			if (seen.has(mapTarget)) return err("map cycle detected: " + [...chain, mapTarget].join(" -> "));
 			seen.add(mapTarget);

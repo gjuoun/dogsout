@@ -41,8 +41,8 @@ export function initCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "init",
-				description: "create vault.enc + config.json (master via JTK_MASTER, prompt, or stdin)",
-				args: { force: flag({ long: "force", description: "reset an already-initialized home (destructive)" }) },
+			description: "create vault.enc + config.json (master via JTK_MASTER, prompt, or stdin)",
+			args: { force: flag({ long: "force", description: "reset an already-initialized home (destructive)" }) },
 			handler: async ({ force }): Promise<Result<string, string>> => {
 				const home = jtkHome();
 				if ((await Bun.file(configPath(home)).exists()) && !force) {
@@ -50,7 +50,7 @@ export function initCommand(io: Io = defaultIo) {
 				}
 				let master = process.env.JTK_MASTER;
 				if (!master) {
-						master = process.stdin.isTTY ? await readMasterInteractive() : (await io.stdin()).trim();
+					master = process.stdin.isTTY ? await readMasterInteractive() : (await io.stdin()).trim();
 				}
 				if (!master || master.length < 8) return fail("master password too short (min 8)");
 				const r = await initFiles(home, master);
@@ -70,11 +70,11 @@ export function setCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "set",
-				description: "store a secret from stdin at a jtk:// address",
-				args: {
-					addr: positional({ type: string, displayName: "jtk://vault/item/field" }),
-					stdin: flag({ long: "stdin", description: "value is read from stdin (default behavior)" }),
-				},
+			description: "store a secret from stdin at a jtk:// address",
+			args: {
+				addr: positional({ type: string, displayName: "jtk://vault/item/field" }),
+				stdin: flag({ long: "stdin", description: "value is read from stdin (default behavior)" }),
+			},
 			handler: async ({ addr }): Promise<Result<string, string>> => {
 				const parsed = parseAddress(addr);
 				if (parsed.isErr()) return err(parsed.error);
@@ -104,7 +104,9 @@ export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result
 	return runJtk<string>(setCommand(io), argv);
 }
 
-export async function openDataOnce(ctx: Ctx): Promise<Result<{ data: import("../../contracts/vault.ts").VaultData }, string>> {
+export async function openDataOnce(
+	ctx: Ctx,
+): Promise<Result<{ data: import("../../contracts/vault.ts").VaultData }, string>> {
 	const opened = await openData(ctx);
 	if (opened.isErr()) return err(opened.error);
 	return ok({ data: opened.value.data });
@@ -131,11 +133,11 @@ export function getCommand() {
 	return withMeta(
 		command({
 			name: "get",
-				description: "read a value (masked digest by default; --reveal prints plaintext)",
-				args: {
-					name: positional({ type: string, displayName: "alias|jtk://vault/item/field" }),
-					reveal: flag({ long: "reveal", description: "print the plaintext value to stdout" }),
-				},
+			description: "read a value (masked digest by default; --reveal prints plaintext)",
+			args: {
+				name: positional({ type: string, displayName: "alias|jtk://vault/item/field" }),
+				reveal: flag({ long: "reveal", description: "print the plaintext value to stdout" }),
+			},
 			handler: async ({ name, reveal }): Promise<Result<string, string>> => {
 				const value = await readValue(name);
 				if (value.isErr()) return err(value.error);
@@ -167,13 +169,13 @@ export function lsCommand() {
 				const lines: string[] = [];
 				const summary: Record<string, Record<string, string[]>> = {};
 				for (const [v, items] of Object.entries(opened.value.data.vaults)) {
-						summary[v] = {};
-						for (const [i, item] of Object.entries(items)) {
-								summary[v][i] = Object.keys(item.fields);
-								for (const f of Object.keys(item.fields)) lines.push(`jtk://${v}/${i}/${f}`);
-						}
+					summary[v] = {};
+					for (const [i, item] of Object.entries(items)) {
+						summary[v][i] = Object.keys(item.fields);
+						for (const f of Object.keys(item.fields)) lines.push(`jtk://${v}/${i}/${f}`);
 					}
-					return ok(json ? JSON.stringify({ vaults: summary }, null, 2) : lines.join("\n"));
+				}
+				return ok(json ? JSON.stringify({ vaults: summary }, null, 2) : lines.join("\n"));
 			},
 		}),
 		{ reads: ["vault"], writes: [], env: ["JTK_HOME", "JTK_MASTER"] },
