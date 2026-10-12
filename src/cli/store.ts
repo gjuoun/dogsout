@@ -57,7 +57,7 @@ export async function writeConfig(home: string, config: Config): Promise<Result<
 export async function initFiles(home: string, master: string): Promise<Result<void, string>> {
 	const { mkdirSync } = await import("node:fs");
 	mkdirSync(home, { recursive: true });
-	const cfgR = await writeConfig(home, { version: 1, aliases: {} });
+	const cfgR = await writeConfig(home, { version: 1, aliases: {}, maps: {} });
 	if (cfgR.isErr()) return cfgR;
 	const envelope = await createVault(master, { version: 1, vaults: {} });
 	const w = await writeVaultFile(vaultPath(home), envelope);

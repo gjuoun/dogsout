@@ -12,3 +12,11 @@ export function configPath(home: string = jtkHome()): string {
 export function vaultPath(home: string = jtkHome()): string {
 	return join(home, "vault.enc");
 }
+
+export function grantsPath(home: string = jtkHome()): string {
+	return join(home, "grants.json");
+}
+
+export function sessionsPath(home: string = jtkHome()): string {
+	return join(home, "sessions.json");
+}
