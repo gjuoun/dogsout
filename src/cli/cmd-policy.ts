@@ -1,3 +1,4 @@
+import { command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import type { Config } from "../../contracts/index.ts";
 import { PrincipalSchema, RuleSchema, SettingsSchema } from "../../contracts/index.ts";
@@ -7,23 +8,11 @@ import { parseDuration } from "../policy/ttl.ts";
 import { loadGrants, revokeByAlias } from "../session/grants.ts";
 import { loadSessions } from "../session/session.ts";
 import { parseAddress } from "./address.ts";
+import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
 import { resolveToAddress } from "./map.ts";
 import { jtkHome } from "./paths.ts";
 import { type Ctx, loadConfig, writeConfig } from "./store.ts";
-
-function usage(): Result<never, string> {
-	return err(
-		[
-			"usage:",
-			"  jtk policy simulate [--principal P] [--group G]... [--alias A]...",
-			"  jtk policy why --alias A [--principal P]",
-			"  jtk policy test <cases.json>",
-			"  jtk policy config show | set <key> <value> | rule add <json> | rule rm <id> | principal add <json> | principal rm <name>",
-			"  jtk grants ls [--principal P] | rm <ALIAS> [--principal P]",
-		].join("\n"),
-	);
-}
 
 async function ctxAndConfig(): Promise<Result<{ ctx: Ctx; cfg: Config }, string>> {
 	const ctx = ctxFromEnv();
@@ -39,10 +28,7 @@ async function activeSessionIds(home: string): Promise<string[]> {
 }
 
 /** Preview decisions for aliases — same evaluator as live, nothing granted, nothing revealed. */
-async function simulate(argv: string[]): Promise<Result<string, string>> {
-	const principal = flagValue(argv, "--principal") ?? "cli@simulate";
-	const groups = repeatedValues(argv, "--group");
-	const aliases = repeatedValues(argv, "--alias");
+async function simulateCore(a: { principal: string; group: string[]; alias: string[] }): Promise<Result<string, string>> {
 	const ac = await ctxAndConfig();
 	if (ac.isErr()) return err(ac.error);
 	const { ctx, cfg } = ac.value;
@@ -50,7 +36,7 @@ async function simulate(argv: string[]): Promise<Result<string, string>> {
 	if (opened.isErr()) return err(opened.error);
 	const grants = await loadGrants(ctx.home);
 	if (grants.isErr()) return err(grants.error);
-	const targets = aliases.length > 0 ? aliases : Object.keys(cfg.aliases);
+	const targets = a.alias.length > 0 ? a.alias : Object.keys(cfg.aliases);
 	if (targets.length === 0) return err("no aliases configured — nothing to simulate");
 
 	const lines: string[] = [];
@@ -68,8 +54,8 @@ async function simulate(argv: string[]): Promise<Result<string, string>> {
 		const raw = opened.value.data.vaults[parsed.value.vault]?.[parsed.value.item]?.fields[parsed.value.field];
 		const valueHash = raw !== undefined ? await sha256Hex(raw) : "(missing)";
 		const v = evaluate({
-			principal,
-			groups,
+			principal: a.principal,
+			groups: a.group,
 			alias,
 			address: resolved.value.address,
 			valueHash,
@@ -85,10 +71,7 @@ async function simulate(argv: string[]): Promise<Result<string, string>> {
 }
 
 /** Explain the current decision for one alias: matched rule and grant state. */
-async function why(argv: string[]): Promise<Result<string, string>> {
-	const alias = flagValue(argv, "--alias");
-	if (!alias) return err("jtk policy why --alias A [--principal P]");
-	const principal = flagValue(argv, "--principal") ?? "cli@simulate";
+async function whyCore(a: { alias: string; principal: string }): Promise<Result<string, string>> {
 	const ac = await ctxAndConfig();
 	if (ac.isErr()) return err(ac.error);
 	const { ctx, cfg } = ac.value;
@@ -96,24 +79,24 @@ async function why(argv: string[]): Promise<Result<string, string>> {
 	if (opened.isErr()) return err(opened.error);
 	const grants = await loadGrants(ctx.home);
 	if (grants.isErr()) return err(grants.error);
-	const resolved = resolveToAddress(alias, cfg);
+	const resolved = resolveToAddress(a.alias, cfg);
 	if (resolved.isErr()) return err(resolved.error);
 	const parsed = parseAddress(resolved.value.address);
 	if (parsed.isErr()) return err(parsed.error);
 	const raw = opened.value.data.vaults[parsed.value.vault]?.[parsed.value.item]?.fields[parsed.value.field];
 	const valueHash = raw !== undefined ? await sha256Hex(raw) : "(missing)";
 	const v = evaluate({
-		principal,
-		alias,
+		principal: a.principal,
+		alias: a.alias,
 		address: resolved.value.address,
 		valueHash,
-		rules: cfg.rules ?? [],
-		grants: grants.value.grants,
-		defaultDecision: cfg.settings?.default_decision ?? "ask",
-		activeSessions: await activeSessionIds(ctx.home),
-		now: new Date(),
+			rules: cfg.rules ?? [],
+			grants: grants.value.grants,
+			defaultDecision: cfg.settings?.default_decision ?? "ask",
+			activeSessions: await activeSessionIds(ctx.home),
+			now: new Date(),
 	});
-	const lines = [alias + ": " + v.kind + "  [" + v.via + "] " + v.reason];
+	const lines = [a.alias + ": " + v.kind + "  [" + v.via + "] " + v.reason];
 	if (v.grant) {
 		const left =
 			v.grant.expires_at === null
@@ -135,14 +118,12 @@ interface PolicyCase {
 }
 
 /** Regression fixtures: expected decisions run through the pure evaluator with no grants. */
-async function policyTest(argv: string[]): Promise<Result<string, string>> {
-	const file = argv.find((a) => !a.startsWith("--"));
-	if (!file) return err("jtk policy test <cases.json>");
+async function policyTestCore(a: { file: string }): Promise<Result<string, string>> {
 	let raw: unknown;
 	try {
-		raw = JSON.parse(await Bun.file(file).text());
+		raw = JSON.parse(await Bun.file(a.file).text());
 	} catch {
-		return err("cannot read cases file: " + file);
+		return err("cannot read cases file: " + a.file);
 	}
 	const cases = raw as { cases?: PolicyCase[] };
 	if (!Array.isArray(cases.cases)) return err('cases file must be { "cases": [...] }');
@@ -182,29 +163,26 @@ const SETTABLE: Record<string, (v: string) => Result<string | undefined, string>
 	always_decay: (v) => (parseDuration(v) !== null ? ok(v) : err("must be a duration like 720h")),
 };
 
-async function configSet(argv: string[]): Promise<Result<string, string>> {
-	const [key, value] = argv.filter((a) => !a.startsWith("--"));
-	if (!key || value === undefined)
+async function configSetCore(a: { key: string; value: string }): Promise<Result<string, string>> {
+	const validate = SETTABLE[a.key];
+	if (!validate) {
 		return err("jtk policy config set <key> <value> — keys: " + Object.keys(SETTABLE).join(", "));
-	const validate = SETTABLE[key];
-	if (!validate) return err("unknown setting: " + key);
-	const checked = validate(value);
-	if (checked.isErr()) return err(key + ": " + checked.error);
+	}
+	const checked = validate(a.value);
+	if (checked.isErr()) return err(a.key + ": " + checked.error);
 	const home = jtkHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
-	cfg.value.settings = { ...(cfg.value.settings ?? SettingsSchema.parse({})), [key]: checked.value };
+	cfg.value.settings = { ...(cfg.value.settings ?? SettingsSchema.parse({})), [a.key]: checked.value };
 	const w = await writeConfig(home, cfg.value);
 	if (w.isErr()) return err(w.error);
-	return ok(key + " = " + checked.value);
+	return ok(a.key + " = " + checked.value);
 }
 
-async function ruleAdd(argv: string[]): Promise<Result<string, string>> {
-	const json = argv.find((a) => !a.startsWith("--"));
-	if (!json) return err("jtk policy config rule add '<json>'");
+async function ruleAddCore(a: { json: string }): Promise<Result<string, string>> {
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(json);
+		parsed = JSON.parse(a.json);
 	} catch {
 		return err("rule json is not valid JSON");
 	}
@@ -222,27 +200,23 @@ async function ruleAdd(argv: string[]): Promise<Result<string, string>> {
 	return ok("rule " + rule.data.id + " added (position " + rules.length + ", last-match-wins)");
 }
 
-async function ruleRm(argv: string[]): Promise<Result<string, string>> {
-	const id = argv.find((a) => !a.startsWith("--"));
-	if (!id) return err("jtk policy config rule rm <id>");
+async function ruleRmCore(a: { id: string }): Promise<Result<string, string>> {
 	const home = jtkHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const rules = cfg.value.rules ?? [];
-	const next = rules.filter((r) => r.id !== id);
-	if (next.length === rules.length) return err("no such rule: " + id);
+	const next = rules.filter((r) => r.id !== a.id);
+	if (next.length === rules.length) return err("no such rule: " + a.id);
 	cfg.value.rules = next;
 	const w = await writeConfig(home, cfg.value);
 	if (w.isErr()) return err(w.error);
-	return ok("rule " + id + " removed");
+	return ok("rule " + a.id + " removed");
 }
 
-async function principalAdd(argv: string[]): Promise<Result<string, string>> {
-	const json = argv.find((a) => !a.startsWith("--"));
-	if (!json) return err("jtk policy config principal add '<json>'");
+async function principalAddCore(a: { json: string }): Promise<Result<string, string>> {
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(json);
+		parsed = JSON.parse(a.json);
 	} catch {
 		return err("principal json is not valid JSON");
 	}
@@ -260,104 +234,192 @@ async function principalAdd(argv: string[]): Promise<Result<string, string>> {
 	return ok("principal " + p.data.name + " added");
 }
 
-async function principalRm(argv: string[]): Promise<Result<string, string>> {
-	const name = argv.find((a) => !a.startsWith("--"));
-	if (!name) return err("jtk policy config principal rm <name>");
+async function principalRmCore(a: { name: string }): Promise<Result<string, string>> {
 	const home = jtkHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const principals = cfg.value.principals ?? [];
-	const next = principals.filter((p) => p.name !== name);
-	if (next.length === principals.length) return err("no such principal: " + name);
+	const next = principals.filter((p) => p.name !== a.name);
+	if (next.length === principals.length) return err("no such principal: " + a.name);
 	cfg.value.principals = next;
 	const w = await writeConfig(home, cfg.value);
 	if (w.isErr()) return err(w.error);
-	return ok("principal " + name + " removed");
+	return ok("principal " + a.name + " removed");
 }
 
-async function policyConfig(argv: string[]): Promise<Result<string, string>> {
-	const [sub, ...rest] = argv;
-	switch (sub) {
-		case "show":
-			return await configShow();
-		case "set":
-			return await configSet(rest);
-		case "rule":
-			if (rest[0] === "add") return await ruleAdd(rest.slice(1));
-			if (rest[0] === "rm") return await ruleRm(rest.slice(1));
-			return err("usage: jtk policy config rule add <json> | rule rm <id>");
-		case "principal":
-			if (rest[0] === "add") return await principalAdd(rest.slice(1));
-			if (rest[0] === "rm") return await principalRm(rest.slice(1));
-			return err("usage: jtk policy config principal add <json> | principal rm <name>");
-		default:
-			return err("jtk policy config show|set|rule|principal");
-	}
+function configCommand() {
+	return subcommands({
+		name: "config",
+		description: "inspect and safely edit policy settings, rules and principals",
+		cmds: {
+			show: command({
+				name: "show",
+				description: "print the current config json",
+				args: {},
+				handler: configShow,
+			}),
+			set: command({
+				name: "set",
+				description: "set one settings key (default_decision, always_decay)",
+				args: {
+					key: positional({ type: string, displayName: "key" }),
+					value: positional({ type: string, displayName: "value" }),
+				},
+				handler: configSetCore,
+			}),
+			rule: subcommands({
+				name: "rule",
+				description: "add or remove access rules",
+				cmds: {
+					add: command({
+						name: "add",
+						description: "append a rule json (last-match-wins)",
+						args: { json: positional({ type: string, displayName: "<json>" }) },
+						handler: ruleAddCore,
+					}),
+					rm: command({
+						name: "rm",
+						description: "remove a rule by id",
+						args: { id: positional({ type: string, displayName: "id" }) },
+						handler: ruleRmCore,
+					}),
+				},
+			}),
+			principal: subcommands({
+				name: "principal",
+				description: "add or remove principals",
+				cmds: {
+					add: command({
+						name: "add",
+						description: "append a principal json",
+						args: { json: positional({ type: string, displayName: "<json>" }) },
+						handler: principalAddCore,
+					}),
+					rm: command({
+						name: "rm",
+						description: "remove a principal by name",
+						args: { name: positional({ type: string, displayName: "name" }) },
+						handler: principalRmCore,
+					}),
+				},
+			}),
+		},
+	});
+}
+
+export function policyCommand() {
+	return withMeta(
+		subcommands({
+			name: "policy",
+			description: "F2 policy surface: preview, explain and regression-test decisions; safe config edits",
+			cmds: {
+				simulate: command({
+					name: "simulate",
+					description: "preview decisions for aliases (nothing granted, nothing revealed)",
+					args: {
+						principal: option({
+							long: "principal",
+							type: string,
+							defaultValue: "cli@simulate",
+							description: "requesting principal",
+						}),
+						group: multioption({ long: "group", type: string, description: "principal group (repeatable)" }),
+						alias: multioption({ long: "alias", type: string, description: "alias to preview (repeatable; default all)" }),
+					},
+					handler: simulateCore,
+				}),
+				why: command({
+					name: "why",
+					description: "explain the current decision for one alias",
+					args: {
+						alias: option({ long: "alias", type: string, description: "alias to explain" }),
+						principal: option({
+							long: "principal",
+							type: string,
+							defaultValue: "cli@simulate",
+							description: "requesting principal",
+						}),
+					},
+					handler: whyCore,
+				}),
+				test: command({
+					name: "test",
+					description: "run decision fixtures from a cases json",
+					args: { file: positional({ type: string, displayName: "cases.json" }) },
+					handler: policyTestCore,
+				}),
+				config: configCommand(),
+			},
+		}),
+		{ reads: ["vault", "config", "grants", "sessions"], writes: ["config"], env: ["JTK_HOME", "JTK_MASTER"] },
+	);
 }
 
 export async function runPolicy(argv: string[]): Promise<Result<string, string>> {
-	const [sub, ...rest] = argv;
-	switch (sub) {
-		case "simulate":
-			return await simulate(rest);
-		case "why":
-			return await why(rest);
-		case "test":
-			return await policyTest(rest);
-		case "config":
-			return await policyConfig(rest);
-		default:
-			return usage();
+	return runJtk<string>(policyCommand(), argv);
+}
+
+async function grantsLsCore(a: { principal?: string }): Promise<Result<string, string>> {
+	const file = await loadGrants(jtkHome());
+	if (file.isErr()) return err(file.error);
+	const active = await activeSessionIds(jtkHome());
+	const now = new Date();
+	const rows = file.value.grants
+		.filter((g) => (a.principal ? g.principal === a.principal : true))
+		.filter((g) => !g.consumed && (g.expires_at === null || new Date(g.expires_at) > now))
+		.map((g) => {
+			const left =
+				g.expires_at === null
+					? "session" + (active.includes(g.session ?? "") ? "" : " (closed)")
+					: Math.round((new Date(g.expires_at).getTime() - now.getTime()) / 60_000) + "m";
+			return g.principal + "  " + g.alias + "  ttl=" + g.ttl + "  " + left + "  via=" + g.approved_via;
+		});
+	return ok(rows.length > 0 ? rows.join("\n") : "(no live grants)");
+}
+
+async function grantsRmCore(a: { alias: string; principal?: string }): Promise<Result<string, string>> {
+	const grants = await loadGrants(jtkHome());
+	if (grants.isErr()) return err(grants.error);
+	const targets = grants.value.grants.filter(
+		(g) => g.alias === a.alias && (a.principal ? g.principal === a.principal : true),
+	);
+	if (targets.length === 0) return err("no grants for alias " + a.alias);
+	let removed = 0;
+	for (const t of targets) {
+		const r = await revokeByAlias(jtkHome(), t.principal, t.alias);
+		if (r.isErr()) return err(r.error);
+		removed += r.value;
 	}
+	return ok("revoked " + removed + " grant(s) for " + a.alias + " — next request re-asks");
+}
+
+export function grantsCommand() {
+	return withMeta(
+		subcommands({
+			name: "grants",
+			description: "inspect and revoke approvals (metadata only, never values)",
+			cmds: {
+				ls: command({
+					name: "ls",
+					description: "list live grants",
+					args: { principal: option({ long: "principal", type: optional(string), description: "filter by principal" }) },
+					handler: grantsLsCore,
+				}),
+				rm: command({
+					name: "rm",
+					description: "revoke grants for an alias",
+					args: {
+						alias: positional({ type: string, displayName: "ALIAS" }),
+						principal: option({ long: "principal", type: optional(string), description: "filter by principal" }),
+							},
+					handler: grantsRmCore,
+				}),
+			},
+		}),
+		{ reads: ["grants", "sessions"], writes: ["grants"], env: ["JTK_HOME"] },
+	);
 }
 
 export async function runGrants(argv: string[]): Promise<Result<string, string>> {
-	const [sub, ...rest] = argv;
-	const principal = flagValue(rest, "--principal");
-	if (sub === "ls") {
-		const file = await loadGrants(jtkHome());
-		if (file.isErr()) return err(file.error);
-		const active = await activeSessionIds(jtkHome());
-		const now = new Date();
-		const rows = file.value.grants
-			.filter((g) => (principal ? g.principal === principal : true))
-			.filter((g) => !g.consumed && (g.expires_at === null || new Date(g.expires_at) > now))
-			.map((g) => {
-				const left =
-					g.expires_at === null
-						? "session" + (active.includes(g.session ?? "") ? "" : " (closed)")
-						: Math.round((new Date(g.expires_at).getTime() - now.getTime()) / 60_000) + "m";
-				return g.principal + "  " + g.alias + "  ttl=" + g.ttl + "  " + left + "  via=" + g.approved_via;
-			});
-		return ok(rows.length > 0 ? rows.join("\n") : "(no live grants)");
-	}
-	if (sub === "rm") {
-		const alias = rest.find((a) => !a.startsWith("--"));
-		if (!alias) return err("jtk grants rm <ALIAS> [--principal P]");
-		const grants = await loadGrants(jtkHome());
-		if (grants.isErr()) return err(grants.error);
-		const targets = grants.value.grants.filter(
-			(g) => g.alias === alias && (principal ? g.principal === principal : true),
-		);
-		if (targets.length === 0) return err("no grants for alias " + alias);
-		let removed = 0;
-		for (const t of targets) {
-			const r = await revokeByAlias(jtkHome(), t.principal, t.alias);
-			if (r.isErr()) return err(r.error);
-			removed += r.value;
-		}
-		return ok("revoked " + removed + " grant(s) for " + alias + " — next request re-asks");
-	}
-	return err("jtk grants ls [--principal P] | rm <ALIAS> [--principal P]");
-}
-
-function flagValue(argv: string[], name: string): string | undefined {
-	const i = argv.indexOf(name);
-	return i !== -1 ? argv[i + 1] : undefined;
-}
-
-function repeatedValues(argv: string[], name: string): string[] {
-	const out: string[] = [];
-	for (let i = 0; i < argv.length; i++) if (argv[i] === name && argv[i + 1]) out.push(argv[i + 1] as string);
-	return out;
+	return runJtk<string>(grantsCommand(), argv);
 }

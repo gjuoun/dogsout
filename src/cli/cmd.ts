@@ -26,9 +26,22 @@ function parseErrorMessage(exit: unknown): string {
 	return raw.replace(/^error: found \d+ errors?\n+/, "").trim();
 }
 
-/** Run one command in-process and map its outcome back onto neverthrow (unit-test surface). */
+/** Run one command in-process and map its outcome back onto neverthrow (unit-test surface).
+ * Accepts a single command (ok value = handler return) or a subcommands tree
+ * (ok value = {command, value}); both unwrap to the handler's Result.
+ */
 export async function runJtk<T>(cmd: Runnable, argv: string[]): Promise<Result<T, string>> {
 	const r = await runSafely(cmd, argv);
 	if (r._tag === "error") return err(parseErrorMessage(r.error));
-	return r.value as Result<T, string>;
+	// subcommands wrap as {command, value} once per nesting level; unwrap all of them
+	let v: unknown = r.value;
+	for (;;) {
+		const w = v as { command?: unknown; value?: unknown };
+		if (w !== null && typeof w === "object" && "command" in w && "value" in w && typeof w.command === "string") {
+			v = w.value;
+			continue;
+		}
+		break;
+	}
+	return v as Result<T, string>;
 }
