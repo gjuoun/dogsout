@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { AskRequestSchema, DecisionSchema } from "../../contracts/ask.ts";
+import { AskRequestSchema, DecisionSchema } from "@jtk/contracts";
 import { serve } from "./serve.ts";
 
 const app = new OpenAPIHono();
