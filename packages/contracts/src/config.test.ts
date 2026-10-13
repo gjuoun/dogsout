@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { AddressSchema, parseConfig } from "./config.ts";
 import { parseVaultData } from "./vault.ts";
 
 describe("config.example.json parses (spec §4 walkthrough fixture)", () => {
 	test("full example config is valid and carries aliases", () => {
-		const raw = JSON.parse(readFileSync("config.example.json", "utf8"));
+		const raw = JSON.parse(readFileSync(join(import.meta.dir, "..", "..", "..", "config.example.json"), "utf8"));
 		const r = parseConfig(raw);
 		expect(r.ok).toBe(true);
 		if (r.ok) {
