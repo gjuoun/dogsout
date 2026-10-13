@@ -1,10 +1,15 @@
 # Working in junethekey
 
+## Layout
+
+- `apps/cli` is the product (`junethekey`, `bin: jtk` -> `src/cli/main.ts`); `packages/contracts` is the zod single source. Root is a private bun workspace root, driven by turbo.
+- `bun run typecheck` / `bun run test` fan out per package through turbo; `bun run lint` and `bun run test:e2e` stay root-level.
+
 ## Find the change target
 
-- The CLI structure (commands, flags, meta: reads/writes/env) is exported by `src/cli/commands.ts`; per-command intent, tiers and invariants live in `src/intent.ts`. Read both for a command before editing its handlers.
-- When a command's surface or behavior changes, update `src/intent.ts` in the same diff — it is the feature map's hand-written half, the command table is the other.
-- Shared callers and contracts (`contracts/`) still need inspection; the map does not encode call graphs beyond resource sharing and module imports.
+- The CLI structure (commands, flags, meta: reads/writes/env) is exported by `apps/cli/src/cli/commands.ts`; per-command intent, tiers and invariants live in `apps/cli/src/intent.ts`. Read both for a command before editing its handlers.
+- When a command's surface or behavior changes, update `apps/cli/src/intent.ts` in the same diff — it is the feature map's hand-written half, the command table is the other.
+- Shared callers and contracts (`packages/contracts/`) still need inspection; the map does not encode call graphs beyond resource sharing and module imports.
 
 ## Verify
 
