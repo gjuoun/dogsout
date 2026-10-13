@@ -15,7 +15,7 @@ async function jtk(
 	stdin = "",
 	env: Record<string, string> = {},
 ): Promise<{ code: number; out: string; err: string }> {
-	const proc = Bun.spawn([process.execPath, "src/cli/main.ts", ...args], {
+	const proc = Bun.spawn([process.execPath, "apps/cli/src/cli/main.ts", ...args], {
 		cwd: REPO,
 		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER, ...env },
 		stdout: "pipe",
@@ -45,7 +45,7 @@ const home2 = mkdtempSync(join(tmpdir(), "jtk-e2e-2-"));
 const homeAsk = mkdtempSync(join(tmpdir(), "jtk-e2e-ask-"));
 const homeDeny = mkdtempSync(join(tmpdir(), "jtk-e2e-deny-"));
 const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
-const fakeApprover = join(REPO, "src/ask/helper/fake-approve.ts");
+const fakeApprover = join(REPO, "apps/cli/src/ask/helper/fake-approve.ts");
 try {
 	const init = await jtk(home1, ["init"]);
 	const privateFiles =

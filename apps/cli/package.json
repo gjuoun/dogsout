@@ -1,0 +1,31 @@
+{
+	"name": "junethekey",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"description": "The credential broker for AI agents",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/gjuoun/junethekey.git",
+		"directory": "apps/cli"
+	},
+	"bin": {
+		"jtk": "./src/cli/main.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@jtk/contracts": "workspace:*",
+		"@hono/zod-openapi": "1.6.3",
+		"cmd-ts": "0.15.0",
+		"hash-wasm": "^4.12.0",
+		"neverthrow": "^8.0.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5.9.0"
+	}
+}
