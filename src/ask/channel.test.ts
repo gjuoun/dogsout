@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { AskRequest } from "@jtk/contracts";
 import { err, ok } from "neverthrow";
-import type { AskRequest } from "../../contracts/ask.ts";
 import { type Channel, runAskChain } from "./channel.ts";
 
 const req: AskRequest = {
