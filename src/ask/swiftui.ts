@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { AskRequest, Decision } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import type { AskRequest, Decision } from "../../contracts/ask.ts";
 import { type Channel, decisionFromStdout } from "./channel.ts";
 
 /** Helper binary override for tests and non-standard installs. */
