@@ -1,3 +1,4 @@
+import type { VaultData } from "@jtk/contracts";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { digSubpath, formatAddress, parseAddress } from "./address.ts";
@@ -104,9 +105,7 @@ export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result
 	return runJtk<string>(setCommand(io), argv);
 }
 
-export async function openDataOnce(
-	ctx: Ctx,
-): Promise<Result<{ data: import("../../contracts/vault.ts").VaultData }, string>> {
+export async function openDataOnce(ctx: Ctx): Promise<Result<{ data: VaultData }, string>> {
 	const opened = await openData(ctx);
 	if (opened.isErr()) return err(opened.error);
 	return ok({ data: opened.value.data });
