@@ -1,5 +1,5 @@
+import { parseSessionFile, type SessionFile, type SessionManifest } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import { parseSessionFile, type SessionFile, type SessionManifest } from "../../contracts/session.ts";
 import { sessionsPath } from "../cli/paths.ts";
 
 export async function loadSessions(home: string): Promise<Result<SessionFile, string>> {
