@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { GrantMeta } from "../../contracts/grant.ts";
-import type { Rule } from "../../contracts/index.ts";
+import type { GrantMeta, Rule } from "@jtk/contracts";
 import { evaluate, grantUsable, lastMatchingRule } from "./evaluate.ts";
 
 const NOW = new Date("2026-10-10T12:00:00.000Z");
