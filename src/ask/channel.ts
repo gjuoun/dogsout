@@ -1,5 +1,5 @@
+import { type AskRequest, type Decision, parseDecision } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import { type AskRequest, type Decision, parseDecision } from "../../contracts/ask.ts";
 
 /** One approval outlet in the degradation chain (webui -> swiftui -> cli -> deny). */
 export interface Channel {
