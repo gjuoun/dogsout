@@ -1,7 +1,7 @@
+import type { Config } from "@jtk/contracts";
+import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/contracts";
 import { array, command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import type { Config } from "../../contracts/index.ts";
-import { PrincipalSchema, RuleSchema, SettingsSchema } from "../../contracts/index.ts";
 import { sha256Hex } from "../ask/flow.ts";
 import { evaluate } from "../policy/evaluate.ts";
 import { parseDuration } from "../policy/ttl.ts";
