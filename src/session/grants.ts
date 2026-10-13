@@ -1,7 +1,6 @@
+import type { Settings, TtlTier } from "@jtk/contracts";
+import { type GrantMeta, type GrantsFile, parseGrantsFile } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import type { TtlTier } from "../../contracts/ask.ts";
-import type { Settings } from "../../contracts/config.ts";
-import { type GrantMeta, type GrantsFile, parseGrantsFile } from "../../contracts/grant.ts";
 import { grantsPath } from "../cli/paths.ts";
 import { expiryFor } from "../policy/ttl.ts";
 
