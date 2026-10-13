@@ -61,7 +61,7 @@ beforeAll(async () => {
 	if (w.isErr()) throw new Error(w.error);
 
 	fakeHelper = join(home, "fake-approve.ts");
-	await Bun.write(fakeHelper, await Bun.file("src/ask/helper/fake-approve.ts").text());
+	await Bun.write(fakeHelper, await Bun.file(join(import.meta.dir, "helper", "fake-approve.ts")).text());
 	const { chmodSync } = await import("node:fs");
 	chmodSync(fakeHelper, 0o755);
 });
