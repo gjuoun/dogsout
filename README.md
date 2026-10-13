@@ -4,7 +4,7 @@
 
 `jtk` is a local-first, open-source credential broker: a daemon holds your secrets and releases them to agents (or humans) only under a human-tunable policy — allow / ask / deny, per principal × credential × moment — with short-lived grants, a tamper-evident audit log, and one-tap approval from your phone. Values never leave your machine.
 
-> **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the F2 policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are the next increments (see the [feature index](features/INDEX.md)).
+> **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`src/intent.ts`](src/intent.ts).
 
 ## Quick start (F1 monolith)
 
@@ -66,7 +66,7 @@ The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift)
 
 ## Current security boundary
 
-F1 is a local vault tool, not yet a policy/approval boundary; it does not defend against an already-compromised same-uid process. `run` strips inherited `JTK_MASTER`, but explicit injection of that name can restore it — see [the documented gap](features/execution.md#run-noleak). Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
+F1 is a local vault tool, not yet a policy/approval boundary; it does not defend against an already-compromised same-uid process. `run` strips inherited `JTK_MASTER`, but explicit injection of that name can restore it. Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
 
 ## Why
 
@@ -99,27 +99,21 @@ Target broker comparison; identity, policy, tokens and audit below are not F1 ca
 | Values | pass through a public server | never leave your machine |
 | Audit | logs | append-only JSONL + hash chain |
 
-## Roadmap (feature-sized increments)
+## Roadmap
 
-<!-- features:roadmap:start -->
-Generated from [features/registry.yaml](features/registry.yaml). See the [feature index](features/INDEX.md) for intent, evidence and code/test pointers.
-
-| Milestone | Scope | Feature state |
+| Milestone | Scope | State |
 |---|---|---|
-| F1 | Local monolith CLI | 26 shipped |
-| F2 | Policy engine | 16 shipped |
-| F3 | Local broker and phone approval | 12 planned |
-| F4 | Scoped tokens | 5 planned |
-| F5 | Self-hosted relay | 4 planned |
+| F1 | Local monolith CLI | shipped |
+| F2 | Policy engine (rules, TTL grants, sessions, local approval) | shipped |
+| F3 | Local broker and phone approval | next |
+| F4 | Scoped tokens | planned |
+| F5 | Self-hosted relay | planned |
 
-Unscheduled directions: 6 planned, 11 deferred. Distribution, MCP/adapters, hosted relay and deferred sync/backup are separate keys, not an implied release promise.
-
-Shipped means locally available, not published or fully regression-covered. Partial/manual evidence and known gaps remain explicit in the feature pages.
-<!-- features:roadmap:end -->
+Milestones are groups, not a dependency order. Shipped means locally available, not published or fully regression-covered.
 
 ## Contributing
 
-Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test`, `bun run test:e2e` and `bun run features:check` must pass. Start with [AGENTS.md](AGENTS.md); update registry and prose together, then run `bun run features:generate`.
+Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update `src/intent.ts` in the same diff.
 
 ## License
 
