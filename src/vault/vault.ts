@@ -1,6 +1,6 @@
+import { parseVaultData, type VaultData } from "@jtk/contracts";
 import { argon2id } from "hash-wasm";
 import { err, ok, type Result } from "neverthrow";
-import { parseVaultData, type VaultData } from "../../contracts/vault.ts";
 
 /** Vault file envelope (plaintext on disk is this JSON, values are base64). */
 export interface VaultFile {
