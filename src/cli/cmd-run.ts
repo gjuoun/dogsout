@@ -1,9 +1,8 @@
 import { hostname } from "node:os";
+import type { Config, VaultData } from "@jtk/contracts";
+import { SessionManifestSchema } from "@jtk/contracts";
 import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import type { Config } from "../../contracts/index.ts";
-import { SessionManifestSchema } from "../../contracts/session.ts";
-import type { VaultData } from "../../contracts/vault.ts";
 import { cliChannel } from "../ask/cli.ts";
 import {
 	closeSessionFlow,
