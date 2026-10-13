@@ -16,9 +16,7 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"test:e2e": "bun scripts/e2e.ts",
-		"features:check": "bun scripts/features.ts check",
-		"features:generate": "bun scripts/features.ts generate"
+		"test:e2e": "bun scripts/e2e.ts"
 	},
 	"dependencies": {
 		"@hono/zod-openapi": "1.6.3",
