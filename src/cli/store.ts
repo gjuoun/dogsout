@@ -1,6 +1,6 @@
+import { type Config, parseConfig, type VaultData } from "@jtk/contracts";
 import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
-import { type Config, parseConfig, type VaultData } from "../../contracts/index.ts";
 import { createVault, openVault, readVaultFile, saveVault, type VaultFile, writeVaultFile } from "../vault/vault.ts";
 import { configPath, vaultPath } from "./paths.ts";
 
