@@ -4,7 +4,7 @@
 
 `jtk` is a local-first, open-source credential broker: a daemon holds your secrets and releases them to agents (or humans) only under a human-tunable policy — allow / ask / deny, per principal × credential × moment — with short-lived grants, a tamper-evident audit log, and one-tap approval from your phone. Values never leave your machine.
 
-> **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`src/intent.ts`](src/intent.ts).
+> **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts).
 
 ## Quick start (F1 monolith)
 
@@ -16,53 +16,53 @@ bun install
 # export/help do not decrypt or require the master
 export JTK_MASTER="a-long-master-passphrase"
 
-bun src/cli/main.ts init                       # create vault.enc (AES-256-GCM, argon2id) + config.json
-echo "sk-..." | bun src/cli/main.ts set jtk://dev/zai/api_key --stdin
-bun src/cli/main.ts get jtk://dev/zai/api_key                 # masked digest (sha256:…)
-bun src/cli/main.ts get jtk://dev/zai/api_key --reveal        # actual value
-bun src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alias
+bun apps/cli/src/cli/main.ts init                       # create vault.enc (AES-256-GCM, argon2id) + config.json
+echo "sk-..." | bun apps/cli/src/cli/main.ts set jtk://dev/zai/api_key --stdin
+bun apps/cli/src/cli/main.ts get jtk://dev/zai/api_key                 # masked digest (sha256:…)
+bun apps/cli/src/cli/main.ts get jtk://dev/zai/api_key --reveal        # actual value
+bun apps/cli/src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alias
 
 # inject secrets into child env without a plaintext cache; the child can still persist values
-bun src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
+bun apps/cli/src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
 
 # whole .env files (--from-env: literals pass through, jtk:// refs resolve; item spread --from-item was removed)
 printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only — committable
-bun src/cli/main.ts run --from-env app.env -- ./deploy.sh
+bun apps/cli/src/cli/main.ts run --from-env app.env -- ./deploy.sh
 
 # migrate a simple KEY=value file (values in; jtk:// becomes aliases; op:// skips appear in the summary)
 printf 'DEEPSEEK_API_KEY=sk-x\nZAI=jtk://dev/zai/api_key\n' > keys.env
-bun src/cli/main.ts import-env keys.env --vault dev --item misc
-bun src/cli/main.ts export --format env-ref                  # refs only, safe to commit
+bun apps/cli/src/cli/main.ts import-env keys.env --vault dev --item misc
+bun apps/cli/src/cli/main.ts export --format env-ref                  # refs only, safe to commit
 ```
 
 ## F2: policy, approval, sessions
 
 ```bash
 # rules: last-match-wins, no match -> default_decision (ask). deny beats every grant.
-bun src/cli/main.ts policy config rule add '{"id":"cron-allow","principal":"cron-*","resource":"*_API_KEY","decide":"allow"}'
-bun src/cli/main.ts policy config rule add '{"id":"zai-ask","principal":"*","resource":"ZAI_*","decide":"ask","ask_on":["first-use","value-changed"]}'
-bun src/cli/main.ts policy simulate --principal 'nightly@host' --alias ZAI_API_KEY   # preview, no grant
-bun src/cli/main.ts policy why --alias ZAI_API_KEY                                  # verdict + grant state
+bun apps/cli/src/cli/main.ts policy config rule add '{"id":"cron-allow","principal":"cron-*","resource":"*_API_KEY","decide":"allow"}'
+bun apps/cli/src/cli/main.ts policy config rule add '{"id":"zai-ask","principal":"*","resource":"ZAI_*","decide":"ask","ask_on":["first-use","value-changed"]}'
+bun apps/cli/src/cli/main.ts policy simulate --principal 'nightly@host' --alias ZAI_API_KEY   # preview, no grant
+bun apps/cli/src/cli/main.ts policy why --alias ZAI_API_KEY                                  # verdict + grant state
 
 # approval: with no allow rule, run asks — SwiftUI window (jtk-approve helper) or CLI prompt.
 # timeout / closed window / no channel = deny, always. Approvals become metadata-only grants
 # (agent/alias/value_hash/expiry) in grants.json; rotate the value and the grant dies.
-bun src/cli/main.ts run --env ZAI_API_KEY -- ./script.sh
-bun src/cli/main.ts grants ls                          # what is live, and for how long
-bun src/cli/main.ts grants rm ZAI_API_KEY              # revoke -> next run asks again
+bun apps/cli/src/cli/main.ts run --env ZAI_API_KEY -- ./script.sh
+bun apps/cli/src/cli/main.ts grants ls                          # what is live, and for how long
+bun apps/cli/src/cli/main.ts grants rm ZAI_API_KEY              # revoke -> next run asks again
 
 # sessions: one manifest invites keys in one approval window; grants die when the run ends;
 # an interrupted run resumes once (--resume replays the last approval list, permissions not values)
 printf '{"id":"sess_1","principal":"agent@laptop","groups":[],"invites":["ZAI_API_KEY"]}' > session.json
-bun src/cli/main.ts run --session session.json --env ZAI_API_KEY -- ./long-job.sh
-bun src/cli/main.ts run --session session.json --resume --env ZAI_API_KEY -- ./long-job.sh
+bun apps/cli/src/cli/main.ts run --session session.json --env ZAI_API_KEY -- ./long-job.sh
+bun apps/cli/src/cli/main.ts run --session session.json --resume --env ZAI_API_KEY -- ./long-job.sh
 
 # map slots: chain references resolved fresh on every read — rotate the upstream, slots follow
-bun src/cli/main.ts map llm ZAI_API_KEY
-bun src/cli/main.ts get llm
+bun apps/cli/src/cli/main.ts map llm ZAI_API_KEY
+bun apps/cli/src/cli/main.ts get llm
 ```
 
-The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`src/ask/helper/jtk-approve.swift`, build with `scripts/build-helper.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
+The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/cli/src/ask/helper/jtk-approve.swift`, build with `scripts/build-helper.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
 
 ## Current security boundary
 
@@ -113,7 +113,7 @@ Milestones are groups, not a dependency order. Shipped means locally available, 
 
 ## Contributing
 
-Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update `src/intent.ts` in the same diff.
+Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update `(apps/cli/src/intent.ts)` in the same diff.
 
 ## License
 
