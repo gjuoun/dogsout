@@ -1,5 +1,5 @@
 // jtk-approve — F2 single-person local approval window (stateless SwiftUI helper).
-// Contract (contracts/ask.ts): jtk writes AskRequest JSON -> launches helper -> Decision JSON on stdout -> exit.
+// Contract (packages/contracts/src/ask.ts): jtk writes AskRequest JSON -> launches helper -> Decision JSON on stdout -> exit.
 // Closing the window is fail-closed: bare deny. --selftest prints a deterministic literal, no window.
 // Build: scripts/build-helper.sh (swiftc -O, ad-hoc signing). CI (linux) never builds this file.
 
