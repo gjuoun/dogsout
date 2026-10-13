@@ -1,12 +1,5 @@
+import { type AskRequest, DEFAULT_TTL, type Decision, TTL_UI_TIERS, type TtlTier, TtlTierSchema } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import {
-	type AskRequest,
-	DEFAULT_TTL,
-	type Decision,
-	TTL_UI_TIERS,
-	type TtlTier,
-	TtlTierSchema,
-} from "../../contracts/ask.ts";
 import type { Channel } from "./channel.ts";
 
 async function question(rl: { question: (q: string, cb: (a: string) => void) => void }, q: string): Promise<string> {
