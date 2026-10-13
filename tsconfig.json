@@ -12,5 +12,5 @@
 		"allowImportingTsExtensions": true,
 		"types": ["bun"]
 	},
-	"include": ["src", "contracts", "scripts"]
+	"include": ["src", "packages", "scripts"]
 }
