@@ -9,7 +9,7 @@
 		"url": "git+https://github.com/gjuoun/junethekey.git"
 	},
 	"bin": {
-		"jtk": "src/cli/main.ts"
+		"jtk": "apps/cli/src/cli/main.ts"
 	},
 	"scripts": {
 		"test": "bun test",
