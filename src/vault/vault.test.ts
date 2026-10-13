@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { emptyVault } from "../../contracts/vault.ts";
+import { emptyVault } from "@jtk/contracts";
 import { createVault, openVault, readVaultFile, saveVault, writeVaultFile } from "./vault.ts";
 
 const MASTER = "correct-master-passphrase";
