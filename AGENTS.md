@@ -2,16 +2,9 @@
 
 ## Find the change target
 
-- Start at [features/INDEX.md](features/INDEX.md); a known key goes directly to [features/registry.yaml](features/registry.yaml).
-- Read the feature's intent, current/target behavior and acceptance before editing its code/test entry points. Shared callers and contracts still need inspection.
-- Cross-domain changes start at [product intent](features/product.md) and [architecture](features/architecture.md). Planned entries are not implemented protection.
-- Keep stable keys when moving files or adding another surface. Do not read the historical docs-spec.md snapshot as a live roadmap.
-
-Known-key lookup (read just its record, not the whole registry):
-
-```bash
-rg -n -F -A 14 'key: "run-fromenv"' features/registry.yaml
-```
+- The CLI structure (commands, flags, meta: reads/writes/env) is exported by `src/cli/commands.ts`; per-command intent, tiers and invariants live in `src/intent.ts`. Read both for a command before editing its handlers.
+- When a command's surface or behavior changes, update `src/intent.ts` in the same diff — it is the feature map's hand-written half, the command table is the other.
+- Shared callers and contracts (`contracts/`) still need inspection; the map does not encode call graphs beyond resource sharing and module imports.
 
 ## Verify
 
@@ -21,10 +14,12 @@ bun run typecheck
 bun run lint
 bun test
 bun run test:e2e
-bun run features:check
 ```
 
-After updating registry/prose, run `bun run features:generate` then `bun run features:check`. INDEX and the marked README roadmap are generated; edit the source, not projections.
+## Workflow
+
+- Incremental commits, one logical change each; PR then merge. Do not push without the owner's go-ahead.
+- A claim of "done" carries evidence: the pipeline green plus the specific command outputs that changed.
 
 ## Boundaries
 
