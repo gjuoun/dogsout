@@ -1,6 +1,6 @@
+import type { Config } from "@jtk/contracts";
 import { command, flag, optional, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import type { Config } from "../../contracts/index.ts";
 import { runJtk, withMeta } from "./cmd.ts";
 import { jtkHome } from "./paths.ts";
 import { loadConfig, writeConfig } from "./store.ts";
