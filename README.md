@@ -93,7 +93,7 @@ jtk grants ls                      # what is live, and for how long
 jtk grants rm ZAI_API_KEY          # revoke -> next run asks again
 ```
 
-The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/ask/helper/jtk-approve.swift`, build with `apps/ask/build.sh`; `scripts/build-helper.sh` is a shim); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
+The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/ask/helper/jtk-approve.swift`, build with `apps/ask/build.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
 
 ### Sessions
 
