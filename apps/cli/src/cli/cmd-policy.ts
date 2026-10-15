@@ -10,8 +10,8 @@ import { loadSessions } from "../session/session.ts";
 import { parseAddress } from "./address.ts";
 import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
-import { resolveToAddress } from "./map.ts";
 import { jtkHome } from "./paths.ts";
+import { resolveToAddress } from "./resolve.ts";
 import { type Ctx, loadConfig, writeConfig } from "./store.ts";
 
 async function ctxAndConfig(): Promise<Result<{ ctx: Ctx; cfg: Config }, string>> {

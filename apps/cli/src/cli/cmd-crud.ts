@@ -3,8 +3,8 @@ import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { digSubpath, formatAddress, parseAddress } from "./address.ts";
 import { runJtk, withMeta } from "./cmd.ts";
-import { resolveToAddress } from "./map.ts";
 import { configPath, jtkHome } from "./paths.ts";
+import { resolveToAddress } from "./resolve.ts";
 import { type Ctx, initFiles, loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
 
 export interface Io {

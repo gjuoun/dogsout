@@ -19,7 +19,7 @@ import { loadGrants, recordApproval } from "../session/grants.ts";
 import { parseEnvFile } from "../vault/io.ts";
 import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
-import { resolveToAddress } from "./map.ts";
+import { resolveToAddress } from "./resolve.ts";
 import { loadConfig } from "./store.ts";
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
