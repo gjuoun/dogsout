@@ -1,11 +1,23 @@
 import type { VaultData } from "@jtk/contracts";
+import {
+	type Ctx,
+	configPath,
+	digSubpath,
+	formatAddress,
+	initFiles,
+	jtkHome,
+	loadConfig,
+	masterFromEnv,
+	nowIso,
+	openData,
+	parseAddress,
+	resolveToAddress,
+	saveData,
+	writeConfig,
+} from "@jtk/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { digSubpath, formatAddress, parseAddress } from "./address.ts";
 import { runJtk, withMeta } from "./cmd.ts";
-import { configPath, jtkHome } from "./paths.ts";
-import { resolveToAddress } from "./resolve.ts";
-import { type Ctx, initFiles, loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
 
 export interface Io {
 	stdin: () => Promise<string>;
