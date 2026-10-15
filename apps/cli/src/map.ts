@@ -3,6 +3,10 @@ import { command, flag, optional, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
 
+/**
+ * The `jtk map` command (chained reference slots) — unrelated to the notebook feature map,
+ * which this repo exposes only as ./commands.ts + ./intent.ts and is read outside the repo.
+ */
 export function mapCommand() {
 	return withMeta(
 		command({

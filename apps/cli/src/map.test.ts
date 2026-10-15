@@ -2,8 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Io, runAlias, runGet, runInit, runSet } from "./cmd-crud.ts";
+import { runAlias } from "./alias.ts";
+import type { Io } from "./cmd.ts";
+import { runGet } from "./get.ts";
+import { runInit } from "./init.ts";
 import { runMap } from "./map.ts";
+import { runSet } from "./set.ts";
 
 const MASTER = "map-test-master";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });

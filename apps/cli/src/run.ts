@@ -21,7 +21,7 @@ import { SessionManifestSchema } from "@jtk/type-contracts";
 import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
-import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
+import { ctxFromEnv, openDataOnce } from "./context.ts";
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

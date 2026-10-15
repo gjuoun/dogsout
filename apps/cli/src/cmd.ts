@@ -1,6 +1,11 @@
 import { runSafely } from "cmd-ts";
 import { err, type Result } from "neverthrow";
 
+/** Fail a command handler on a plain message (Result plumbing shared by every command). */
+export function fail(message: string): Result<never, string> {
+	return err(message);
+}
+
 /** Resources a command can touch — the feature map's reads/writes vocabulary. */
 export type Resource = "config" | "vault" | "grants" | "sessions";
 
@@ -47,3 +52,18 @@ export function unwrapRunnerOutput(v: unknown): unknown {
 		return v;
 	}
 }
+
+/**
+ * The stdin/stdout seam that every terminal-touching command takes as its last parameter:
+ * tests inject a fake, the entry uses `defaultIo`. It lives here, not in a command module,
+ * because every command test imports it.
+ */
+export interface Io {
+	stdin: () => Promise<string>;
+	stdout: (line: string) => void;
+}
+
+export const defaultIo: Io = {
+	stdin: async () => await new Response(Bun.stdin).text(),
+	stdout: (l) => console.log(l),
+};
