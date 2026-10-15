@@ -1,21 +1,20 @@
 /**
  * @jtk/core is the broker engine — vault, policy, session and the ask flow.
  *
- * Forwarder shell: the real modules still live under apps/cli/src while the call sites
- * migrate one file per commit. Once every call site imports @jtk/core, the files move in
- * and this file becomes the package's own re-export surface.
+ * The single import surface for every app: nothing here reaches back into an app, and
+ * nothing in an app imports a core module by path.
  */
-export * from "../../../apps/cli/src/ask/channel.ts";
-export * from "../../../apps/cli/src/ask/cli.ts";
-export * from "../../../apps/cli/src/ask/flow.ts";
-export * from "../../../apps/cli/src/ask/swiftui.ts";
-export * from "../../../apps/cli/src/cli/address.ts";
-export * from "../../../apps/cli/src/cli/paths.ts";
-export * from "../../../apps/cli/src/cli/resolve.ts";
-export * from "../../../apps/cli/src/cli/store.ts";
-export * from "../../../apps/cli/src/policy/evaluate.ts";
-export * from "../../../apps/cli/src/policy/ttl.ts";
-export * from "../../../apps/cli/src/session/grants.ts";
-export * from "../../../apps/cli/src/session/session.ts";
-export * from "../../../apps/cli/src/vault/io.ts";
-export * from "../../../apps/cli/src/vault/vault.ts";
+export * from "./address.ts";
+export * from "./ask/channel.ts";
+export * from "./ask/cli.ts";
+export * from "./ask/flow.ts";
+export * from "./ask/swiftui.ts";
+export * from "./paths.ts";
+export * from "./policy/evaluate.ts";
+export * from "./policy/ttl.ts";
+export * from "./resolve.ts";
+export * from "./session/grants.ts";
+export * from "./session/session.ts";
+export * from "./store.ts";
+export * from "./vault/io.ts";
+export * from "./vault/vault.ts";

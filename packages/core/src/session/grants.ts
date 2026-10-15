@@ -1,7 +1,7 @@
 import type { Settings, TtlTier } from "@jtk/contracts";
 import { type GrantMeta, type GrantsFile, parseGrantsFile } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import { grantsPath } from "../cli/paths.ts";
+import { grantsPath } from "../paths.ts";
 import { expiryFor } from "../policy/ttl.ts";
 
 export interface Approval {

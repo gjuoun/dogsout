@@ -1,6 +1,6 @@
 import { parseSessionFile, type SessionFile, type SessionManifest } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
-import { sessionsPath } from "../cli/paths.ts";
+import { sessionsPath } from "../paths.ts";
 
 export async function loadSessions(home: string): Promise<Result<SessionFile, string>> {
 	const path = sessionsPath(home);
