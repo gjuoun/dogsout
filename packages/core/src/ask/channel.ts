@@ -1,6 +1,13 @@
 import { type AskRequest, type Decision, parseDecision } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
+/**
+ * The IN-PROCESS half of the approval protocol: `Channel` is what the degradation chain
+ * walks. The WIRE half — the `AskRequest`/`Decision` JSON that crosses into a separate
+ * process (apps/ask) — is owned by packages/type-contracts/src/ask.ts, and this file
+ * consumes it and adds no shape of its own.
+ */
+
 /** One approval outlet in the degradation chain (webui -> swiftui -> cli -> deny). */
 export interface Channel {
 	name: string;
