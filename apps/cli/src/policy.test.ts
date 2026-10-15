@@ -3,8 +3,12 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { recordApproval, sha256Hex } from "@jtk/core";
-import { type Io, runAlias, runInit, runSet } from "./cmd-crud.ts";
-import { runGrants, runPolicy } from "./cmd-policy.ts";
+import { runAlias } from "./alias.ts";
+import type { Io } from "./cmd.ts";
+import { runGrants } from "./grants/grants.ts";
+import { runInit } from "./init.ts";
+import { runPolicy } from "./policy/policy.ts";
+import { runSet } from "./set.ts";
 
 const MASTER = "policy-test-master";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });

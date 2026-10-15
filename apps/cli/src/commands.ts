@@ -1,22 +1,28 @@
-import { aliasCommand, getCommand, initCommand, lsCommand, rmCommand, setCommand } from "./cmd-crud.ts";
-import { exportCommand, importEnvCommand } from "./cmd-io.ts";
+import { aliasCommand } from "./alias.ts";
+import { exportCommand } from "./export.ts";
+import { getCommand } from "./get.ts";
+import { grantsCommand } from "./grants/grants.ts";
+import { grantsLsCommand } from "./grants/ls.ts";
+import { grantsRmCommand } from "./grants/rm.ts";
+import { importEnvCommand } from "./import-env.ts";
+import { initCommand } from "./init.ts";
+import { lsCommand } from "./ls.ts";
+import { mapCommand } from "./map.ts";
 import {
 	configSetCommand,
 	configShowCommand,
-	grantsCommand,
-	grantsLsCommand,
-	grantsRmCommand,
-	policyCommand,
-	policyTestCommand,
 	principalAddCommand,
 	principalRmCommand,
 	ruleAddCommand,
 	ruleRmCommand,
-	simulateCommand,
-	whyCommand,
-} from "./cmd-policy.ts";
-import { runCommand } from "./cmd-run.ts";
-import { mapCommand } from "./map.ts";
+} from "./policy/config.ts";
+import { policyCommand } from "./policy/policy.ts";
+import { simulateCommand } from "./policy/simulate.ts";
+import { policyTestCommand } from "./policy/test.ts";
+import { whyCommand } from "./policy/why.ts";
+import { rmCommand } from "./rm.ts";
+import { runCommand } from "./run.ts";
+import { setCommand } from "./set.ts";
 
 /** The importable command table: notebook feature map ctx/check consumes this. */
 export const COMMANDS = {

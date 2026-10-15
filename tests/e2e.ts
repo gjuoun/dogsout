@@ -15,7 +15,7 @@ async function jtk(
 	stdin = "",
 	env: Record<string, string> = {},
 ): Promise<{ code: number; out: string; err: string }> {
-	const proc = Bun.spawn([process.execPath, "apps/cli/src/cli/main.ts", ...args], {
+	const proc = Bun.spawn([process.execPath, "apps/cli/src/main.ts", ...args], {
 		cwd: REPO,
 		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER, ...env },
 		stdout: "pipe",
