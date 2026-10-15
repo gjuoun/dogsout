@@ -1,0 +1,24 @@
+{
+	"name": "@jtk/core",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"description": "junethekey broker engine — vault, policy, session and the ask flow",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@jtk/contracts": "workspace:*",
+		"hash-wasm": "^4.12.0",
+		"neverthrow": "^8.0.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5.9.0"
+	}
+}

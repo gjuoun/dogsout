@@ -19,6 +19,7 @@
 	},
 	"dependencies": {
 		"@jtk/contracts": "workspace:*",
+		"@jtk/core": "workspace:*",
 		"@hono/zod-openapi": "1.6.3",
 		"cmd-ts": "0.15.0",
 		"hash-wasm": "^4.12.0",
