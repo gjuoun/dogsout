@@ -82,3 +82,51 @@ describe("F1 CLI monolith (JTK_HOME isolated)", () => {
 		if (g.isErr()) expect(g.error).toContain("not found");
 	});
 });
+
+describe("vault v2 behind JTK_VAULT_V2=1 (fake secure enclave helper)", () => {
+	const FAKE_SE = join(import.meta.dir, "..", "..", "..", "packages", "core", "src", "vault", "helper", "fake-se.ts");
+	let v2home = "";
+	let saved: Record<string, string | undefined> = {};
+	beforeAll(() => {
+		v2home = mkdtempSync(join(tmpdir(), "jtk-cli-v2-"));
+		saved = { home: process.env.JTK_HOME, master: process.env.JTK_MASTER };
+		process.env.JTK_HOME = v2home;
+		delete process.env.JTK_MASTER;
+		process.env.JTK_VAULT_V2 = "1";
+		process.env.JTK_SE_HELPER = FAKE_SE;
+	});
+	afterAll(() => {
+		process.env.JTK_HOME = saved.home;
+		if (saved.master !== undefined) process.env.JTK_MASTER = saved.master;
+		delete process.env.JTK_VAULT_V2;
+		delete process.env.JTK_SE_HELPER;
+		rmSync(v2home, { recursive: true, force: true });
+	});
+
+	test("init needs no password, prints the fingerprint and the single-factor warning", async () => {
+		const r = await runInit([], stdinOf(""));
+		expect(r.isOk()).toBe(true);
+		const out = r._unsafeUnwrap();
+		expect(out).toMatch(/vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/);
+		expect(out).toContain("one unlock factor");
+		expect(JSON.parse(await Bun.file(vaultPath(v2home)).text()).version).toBe(2);
+		expect(statSync(vaultPath(v2home)).mode & 0o077).toBe(0);
+	});
+
+	test("set → get --reveal round-trips with no JTK_MASTER", async () => {
+		expect((await runSet(["jtk://dev/gh/token", "--stdin"], stdinOf("FAKE-ghp-v2\n"))).isOk()).toBe(true);
+		const g = await runGet(["jtk://dev/gh/token", "--reveal"]);
+		expect(g._unsafeUnwrap()).toBe("FAKE-ghp-v2");
+	});
+
+	test("cancelled Touch ID fails closed", async () => {
+		process.env.FAKE_SE_MODE = "deny";
+		try {
+			const g = await runGet(["jtk://dev/gh/token", "--reveal"]);
+			expect(g.isErr()).toBe(true);
+			expect(g._unsafeUnwrapErr()).toContain("vault unlock failed");
+		} finally {
+			delete process.env.FAKE_SE_MODE;
+		}
+	});
+});
