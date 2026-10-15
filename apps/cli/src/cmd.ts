@@ -47,3 +47,18 @@ export function unwrapRunnerOutput(v: unknown): unknown {
 		return v;
 	}
 }
+
+/**
+ * The stdin/stdout seam that every terminal-touching command takes as its last parameter:
+ * tests inject a fake, the entry uses `defaultIo`. It lives here, not in a command module,
+ * because every command test imports it.
+ */
+export interface Io {
+	stdin: () => Promise<string>;
+	stdout: (line: string) => void;
+}
+
+export const defaultIo: Io = {
+	stdin: async () => await new Response(Bun.stdin).text(),
+	stdout: (l) => console.log(l),
+};

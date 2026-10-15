@@ -1,12 +1,10 @@
 import {
-	type Ctx,
 	configPath,
 	digSubpath,
 	formatAddress,
 	initFiles,
 	jtkHome,
 	loadConfig,
-	masterFromEnv,
 	nowIso,
 	openData,
 	parseAddress,
@@ -14,20 +12,10 @@ import {
 	saveData,
 	writeConfig,
 } from "@jtk/core";
-import type { VaultData } from "@jtk/type-contracts";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { runJtk, withMeta } from "./cmd.ts";
-
-export interface Io {
-	stdin: () => Promise<string>;
-	stdout: (line: string) => void;
-}
-
-const defaultIo: Io = {
-	stdin: async () => await new Response(Bun.stdin).text(),
-	stdout: (l) => console.log(l),
-};
+import { defaultIo, type Io, runJtk, withMeta } from "./cmd.ts";
+import { ctxFromEnv } from "./context.ts";
 
 function fail(message: string): Result<never, string> {
 	return err(message);
@@ -42,12 +30,6 @@ async function readMasterInteractive(): Promise<string> {
 	});
 	rl.close();
 	return answer.trim();
-}
-
-export function ctxFromEnv(): Result<Ctx, string> {
-	const master = masterFromEnv();
-	if (master.isErr()) return err(master.error);
-	return ok({ home: jtkHome(), master: master.value });
 }
 
 export function initCommand(io: Io = defaultIo) {
@@ -115,12 +97,6 @@ export function setCommand(io: Io = defaultIo) {
 
 export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result<string, string>> {
 	return runJtk<string>(setCommand(io), argv);
-}
-
-export async function openDataOnce(ctx: Ctx): Promise<Result<{ data: VaultData }, string>> {
-	const opened = await openData(ctx);
-	if (opened.isErr()) return err(opened.error);
-	return ok({ data: opened.value.data });
 }
 
 export async function readValue(name: string): Promise<Result<string, string>> {

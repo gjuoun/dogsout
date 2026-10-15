@@ -17,7 +17,7 @@ import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/type-contracts
 import { array, command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
-import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
+import { ctxFromEnv, openDataOnce } from "./context.ts";
 
 async function ctxAndConfig(): Promise<Result<{ ctx: Ctx; cfg: Config }, string>> {
 	const ctx = ctxFromEnv();
