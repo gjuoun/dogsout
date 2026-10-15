@@ -45,7 +45,10 @@ const home2 = mkdtempSync(join(tmpdir(), "jtk-e2e-2-"));
 const homeAsk = mkdtempSync(join(tmpdir(), "jtk-e2e-ask-"));
 const homeDeny = mkdtempSync(join(tmpdir(), "jtk-e2e-deny-"));
 const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
+const homeV2 = mkdtempSync(join(tmpdir(), "jtk-e2e-v2-"));
+const homeMig = mkdtempSync(join(tmpdir(), "jtk-e2e-mig-"));
 const fakeApprover = join(REPO, "packages/core/src/ask/helper/fake-approve.ts");
+const fakeSe = join(REPO, "packages/core/src/vault/helper/fake-se.ts");
 try {
 	const init = await jtk(home1, ["init"]);
 	const privateFiles =
@@ -177,11 +180,80 @@ try {
 		"session: end withdraws session grants",
 		sessGrants.out,
 	);
+
+	// --- vault v2 (JTK_VAULT_V2=1) with the test-only fake Secure Enclave helper ---
+	const v2Env = { JTK_VAULT_V2: "1", JTK_SE_HELPER: fakeSe, JTK_MASTER: "" };
+	const v2Init = await jtk(homeV2, ["init"], "", v2Env);
+	check(
+		v2Init.code === 0 && /vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/.test(v2Init.out),
+		"v2: init needs no password and prints the fingerprint",
+		v2Init.out + v2Init.err,
+	);
+	const v2Set = await jtk(homeV2, ["set", "jtk://dev/v2/token", "--stdin"], "tok-v2-001", v2Env);
+	const v2Get = await jtk(homeV2, ["get", "jtk://dev/v2/token", "--reveal"], "", v2Env);
+	check(
+		v2Set.code === 0 && v2Get.out.trim() === "tok-v2-001",
+		"v2: set/reveal round-trip without JTK_MASTER",
+		v2Get.err,
+	);
+	const v2Status = await jtk(homeV2, ["vault", "status"], "", v2Env);
+	check(
+		v2Status.code === 0 && v2Status.out.includes("this Mac") && v2Status.out.includes("1 unlock factor"),
+		"v2: vault status shows one se slot and the single-factor warning",
+		v2Status.out + v2Status.err,
+	);
+	await jtk(homeV2, ["set", "jtk://dev/v2/b", "--stdin"], "tok-b", v2Env);
+	await jtk(homeV2, ["set", "jtk://dev/v2/c", "--stdin"], "tok-c", v2Env);
+	check(
+		existsSync(join(homeV2, "vault.enc.bak.1")) && existsSync(join(homeV2, "vault.enc.bak.2")),
+		"v2: writes keep two rolling backups",
+		"missing vault.enc.bak.1/2",
+	);
+	await Bun.write(join(homeV2, "vault.enc"), "{ broken");
+	const v2Broken = await jtk(homeV2, ["get", "jtk://dev/v2/token"], "", v2Env);
+	const v2Restore = await jtk(homeV2, ["vault", "restore"], "", v2Env);
+	const v2After = await jtk(homeV2, ["get", "jtk://dev/v2/token", "--reveal"], "", v2Env);
+	check(
+		v2Broken.code !== 0 &&
+			v2Broken.err.includes("jtk vault restore") &&
+			v2Restore.code === 0 &&
+			v2After.out.trim() === "tok-v2-001",
+		"v2: corrupt vault.enc is reported, restore promotes the backup",
+		v2Broken.err + v2Restore.out + v2Restore.err + v2After.err,
+	);
+	const v2Rekey = await jtk(homeV2, ["vault", "rekey"], "", v2Env);
+	check(
+		v2Rekey.code === 0 && !existsSync(join(homeV2, "vault.enc.bak.1")) && !existsSync(join(homeV2, "vault.enc.bak.2")),
+		"v2: rekey clears the backups",
+		v2Rekey.out + v2Rekey.err,
+	);
+	const v2Deny = await jtk(homeV2, ["get", "jtk://dev/v2/token"], "", { ...v2Env, FAKE_SE_MODE: "deny" });
+	check(
+		v2Deny.code === 1 && v2Deny.err.includes("vault unlock failed"),
+		"v2: cancelled Touch ID fails closed",
+		v2Deny.err,
+	);
+
+	const migInit = await jtk(homeMig, ["init"]);
+	const migSet = await jtk(homeMig, ["set", "jtk://dev/mig/token", "--stdin"], "tok-mig-1");
+	const mig = await jtk(homeMig, ["vault", "migrate"], "", { JTK_VAULT_V2: "1", JTK_SE_HELPER: fakeSe });
+	const migGet = await jtk(homeMig, ["get", "jtk://dev/mig/token", "--reveal"], "", v2Env);
+	check(
+		migInit.code === 0 &&
+			migSet.code === 0 &&
+			mig.code === 0 &&
+			existsSync(join(homeMig, "vault.v1.enc")) &&
+			migGet.out.trim() === "tok-mig-1",
+		"v2: migrate keeps the data and vault.v1.enc, then opens without the master",
+		mig.out + mig.err + migGet.err,
+	);
 } finally {
 	rmSync(home1, { recursive: true, force: true });
 	rmSync(home2, { recursive: true, force: true });
 	rmSync(homeAsk, { recursive: true, force: true });
 	rmSync(homeDeny, { recursive: true, force: true });
 	rmSync(homeSess, { recursive: true, force: true });
+	rmSync(homeV2, { recursive: true, force: true });
+	rmSync(homeMig, { recursive: true, force: true });
 }
 if (failures) process.exit(1);
