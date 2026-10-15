@@ -45,7 +45,7 @@ const home2 = mkdtempSync(join(tmpdir(), "jtk-e2e-2-"));
 const homeAsk = mkdtempSync(join(tmpdir(), "jtk-e2e-ask-"));
 const homeDeny = mkdtempSync(join(tmpdir(), "jtk-e2e-deny-"));
 const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
-const fakeApprover = join(REPO, "apps/cli/src/ask/helper/fake-approve.ts");
+const fakeApprover = join(REPO, "packages/core/src/ask/helper/fake-approve.ts");
 try {
 	const init = await jtk(home1, ["init"]);
 	const privateFiles =
