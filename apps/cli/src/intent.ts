@@ -1,5 +1,5 @@
 // junethekey feature map — intent layer (the only hand-written part of the map).
-// Structure (commands/flags/meta) is exported by ./cli/commands.ts and read live by the
+// Structure (commands/flags/meta) is exported by ./commands.ts and read live by the
 // `jtkmap` query tool (kept locally, outside this repo). This file answers "why" and
 // "what must not break". Only existing functionality is described here.
 // Types are self-contained on purpose: the repo must not depend on local tooling.

@@ -11,7 +11,7 @@
 		"directory": "apps/cli"
 	},
 	"bin": {
-		"jtk": "./src/cli/main.ts"
+		"jtk": "./src/main.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
