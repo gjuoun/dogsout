@@ -4,6 +4,11 @@ import { z } from "zod";
  * AskChannel contract (PRD §3) — the single JSON shape every approval channel
  * consumes and emits. Formalized from the validated mockup (mockups/jtk-approve.swift,
  * PR #4); the helper's --selftest literals are the reference fixtures.
+ *
+ * This is the WIRE half of the approval protocol: these schemas are what crosses a
+ * process boundary (apps/ask writes and reads exactly this JSON). The IN-PROCESS half
+ * — the `Channel` interface the degradation chain walks — is
+ * packages/core/src/ask/channel.ts, which consumes these schemas and nothing else.
  */
 
 /** UI six tiers + manifest-only session tier; always = fixed 30d expiry (always_decay configurable). */

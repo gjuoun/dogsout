@@ -11,6 +11,7 @@
 - The CLI structure (commands, flags, meta: reads/writes/env) is exported by `apps/cli/src/cli/commands.ts`; per-command intent, tiers and invariants live in `apps/cli/src/intent.ts`. Read both for a command before editing its handlers.
 - When a command's surface or behavior changes, update `apps/cli/src/intent.ts` in the same diff — it is the feature map's hand-written half, the command table is the other.
 - Shared callers and contracts (`packages/type-contracts/`, `packages/core/`) still need inspection; the map does not encode call graphs beyond resource sharing and module imports.
+- The approval protocol has two declared homes: the **wire** half (the JSON that crosses into `apps/ask`) is `packages/type-contracts/src/ask.ts`; the **in-process** half (the `Channel` interface and its degradation chain) is `packages/core/src/ask/channel.ts`. Changing one is almost always changing both.
 
 ## Verify
 
