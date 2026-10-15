@@ -23,7 +23,6 @@ import { whyCommand } from "./policy/why.ts";
 import { rmCommand } from "./rm.ts";
 import { runCommand } from "./run.ts";
 import { setCommand } from "./set.ts";
-import { vaultMigrateCommand } from "./vault/migrate.ts";
 import { vaultRekeyCommand } from "./vault/rekey.ts";
 import { vaultRestoreCommand } from "./vault/restore.ts";
 import { vaultSlotRmCommand } from "./vault/slot-rm.ts";
@@ -69,7 +68,6 @@ export const SUBCOMMANDS = {
 	},
 	vault: {
 		status: vaultStatusCommand(),
-		migrate: vaultMigrateCommand(),
 		rekey: vaultRekeyCommand(),
 		restore: vaultRestoreCommand(),
 		slot: { rm: vaultSlotRmCommand() },

@@ -8,7 +8,7 @@ import { runExport } from "./export.ts";
 import { runImportEnv } from "./import-env.ts";
 import { runInit } from "./init.ts";
 
-const MASTER = "io-test-master";
+const FAKE_SE = join(import.meta.dir, "..", "..", "..", "packages", "core", "src", "vault", "helper", "fake-se.ts");
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 const FIXTURE = ["DIRECT_ONE=hello123", "REF_ONE=jtk://e2e/misc/DIRECT_ONE", "OP_X=op://dev/a/b"].join("\n");
 let home = "";
@@ -17,7 +17,7 @@ let fixturePath = "";
 beforeAll(async () => {
 	home = mkdtempSync(join(tmpdir(), "jtk-io-"));
 	process.env.JTK_HOME = home;
-	process.env.JTK_MASTER = MASTER;
+	process.env.JTK_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
 	fixturePath = join(home, "fixture.env");
 	await Bun.write(fixturePath, FIXTURE + "\n");
@@ -25,7 +25,7 @@ beforeAll(async () => {
 
 afterAll(() => {
 	delete process.env.JTK_HOME;
-	delete process.env.JTK_MASTER;
+	delete process.env.JTK_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 

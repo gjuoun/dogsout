@@ -5,12 +5,10 @@ import { err, ok, type Result } from "neverthrow";
 /**
  * The app's storage context: the `Ctx` a vault-touching command needs, resolved from the
  * environment. Shared by the crud, run and policy command modules, so it lives here rather
- * than inside any one of them. The master is optional: a v1 vault asks for it when opened,
- * a v2 vault unlocks through the Secure Enclave and never needs it.
+ * than inside any one of them. There is no password: the vault unlocks through the Secure Enclave.
  */
 export function ctxFromEnv(): Result<Ctx, string> {
-	const master = process.env.JTK_MASTER;
-	return ok(master ? { home: jtkHome(), master } : { home: jtkHome() });
+	return ok({ home: jtkHome() });
 }
 
 /** Read the vault once, for a caller that is not writing it back. */

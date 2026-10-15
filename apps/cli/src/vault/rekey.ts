@@ -12,7 +12,6 @@ async function rekeyCore(): Promise<Result<string, string>> {
 	const opened = await openData(ctxR.value);
 	if (opened.isErr()) return err(opened.error);
 	const { envelope, data } = opened.value;
-	if (envelope.version !== 2) return err("rekey needs a v2 vault (see: jtk vault status)");
 	const r = await rekeyV2(envelope.file, data);
 	const w = await writeVaultFile(vaultPath(home), r.file, { rotate: false });
 	if (w.isErr()) return err(w.error.kind);

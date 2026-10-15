@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { listVaultBackups, vaultBrokenPath, vaultPath, vaultV1Path } from "@jtk/core";
+import { listVaultBackups, vaultBrokenPath, vaultPath } from "@jtk/core";
 import type { Io } from "./cmd.ts";
 import { runGet } from "./get.ts";
 import { runInit } from "./init.ts";
@@ -11,20 +11,13 @@ import { runVault } from "./vault/vault.ts";
 
 const FAKE_SE = join(import.meta.dir, "..", "..", "..", "packages", "core", "src", "vault", "helper", "fake-se.ts");
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
-const saved = { home: process.env.JTK_HOME, master: process.env.JTK_MASTER };
+const savedHome = process.env.JTK_HOME;
 const homes: string[] = [];
 
-function freshHome(v2: boolean): string {
+function freshHome(): string {
 	const h = mkdtempSync(join(tmpdir(), "jtk-vault-cmd-"));
 	homes.push(h);
 	process.env.JTK_HOME = h;
-	if (v2) {
-		process.env.JTK_VAULT_V2 = "1";
-		delete process.env.JTK_MASTER;
-	} else {
-		delete process.env.JTK_VAULT_V2;
-		process.env.JTK_MASTER = "vault-cmd-master";
-	}
 	return h;
 }
 
@@ -35,22 +28,19 @@ afterEach(() => {
 	delete process.env.FAKE_SE_MODE;
 });
 afterAll(() => {
-	process.env.JTK_HOME = saved.home;
-	if (saved.master === undefined) delete process.env.JTK_MASTER;
-	else process.env.JTK_MASTER = saved.master;
-	delete process.env.JTK_VAULT_V2;
+	process.env.JTK_HOME = savedHome;
 	delete process.env.JTK_SE_HELPER;
 	for (const h of homes) rmSync(h, { recursive: true, force: true });
 });
 
 async function v2WithSecret(): Promise<string> {
-	const h = freshHome(true);
+	const h = freshHome();
 	expect((await runInit([], stdinOf(""))).isOk()).toBe(true);
 	expect((await runSet(["jtk://dev/gh/token", "--stdin"], stdinOf("FAKE-ghp\n"))).isOk()).toBe(true);
 	return h;
 }
 
-describe("jtk vault (JTK_VAULT_V2, fake secure enclave)", () => {
+describe("jtk vault (fake secure enclave)", () => {
 	test("status lists one se slot on this Mac, the fingerprint and the <2-factor warning", async () => {
 		await v2WithSecret();
 		const r = await runVault(["status"]);
@@ -60,24 +50,10 @@ describe("jtk vault (JTK_VAULT_V2, fake secure enclave)", () => {
 		expect(out).toContain("1 unlock factor");
 	});
 
-	test("migrate turns a v1 vault into v2, keeps the data and vault.v1.enc", async () => {
-		const h = freshHome(false);
-		expect((await runInit([], stdinOf(""))).isOk()).toBe(true);
-		expect((await runSet(["jtk://dev/zai/key", "--stdin"], stdinOf("FAKE-zai\n"))).isOk()).toBe(true);
-		process.env.JTK_VAULT_V2 = "1";
-		const m = await runVault(["migrate"]);
-		expect(m._unsafeUnwrap()).toMatch(/migrated to vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/);
-		expect(existsSync(vaultV1Path(h))).toBe(true);
-		expect(JSON.parse(await Bun.file(vaultPath(h)).text()).version).toBe(2);
-		delete process.env.JTK_MASTER;
-		expect((await runGet(["jtk://dev/zai/key", "--reveal"]))._unsafeUnwrap()).toBe("FAKE-zai");
-	});
-
-	test("migrate is refused without the experimental switch", async () => {
-		freshHome(false);
-		expect((await runInit([], stdinOf(""))).isOk()).toBe(true);
-		const m = await runVault(["migrate"]);
-		expect(m._unsafeUnwrapErr()).toContain("JTK_VAULT_V2");
+	test("status reports a v1 (password) file as unsupported", async () => {
+		const h = freshHome();
+		writeFileSync(vaultPath(h), JSON.stringify({ version: 1, kdf: {}, iv_b64: "x", ct_b64: "y" }));
+		expect((await runVault(["status"]))._unsafeUnwrapErr()).toContain("no longer supported");
 	});
 
 	test("rekey changes the fingerprint, keeps the data and leaves no backups", async () => {

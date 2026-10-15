@@ -18,7 +18,7 @@ export function policyCommand() {
 				config: configCommand(),
 			},
 		}),
-		{ reads: ["vault", "config", "grants", "sessions"], writes: ["config"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: ["vault", "config", "grants", "sessions"], writes: ["config"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

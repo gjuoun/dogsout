@@ -181,11 +181,8 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 		}
 	}
 
-	// strip JTK_MASTER: the master password must not leak into child env (agent-run commands)
-	const { JTK_MASTER: _stripped, ...parentEnv } = process.env;
-	void _stripped;
 	const proc = Bun.spawn(cmd, {
-		env: { ...parentEnv, ...inject },
+		env: { ...process.env, ...inject },
 		stdout: "inherit",
 		stderr: "inherit",
 	});
@@ -214,7 +211,7 @@ export function runCommand() {
 		{
 			reads: ["vault", "config", "grants", "sessions"],
 			writes: ["grants", "sessions"],
-			env: ["JTK_HOME", "JTK_MASTER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
+			env: ["JTK_HOME", "JTK_SE_HELPER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
 		},
 	);
 }

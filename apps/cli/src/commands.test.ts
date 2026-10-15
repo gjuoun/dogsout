@@ -84,7 +84,6 @@ describe("command table contract (feature map extraction)", () => {
 				"policy simulate",
 				"policy test",
 				"policy why",
-				"vault migrate",
 				"vault rekey",
 				"vault restore",
 				"vault slot rm",

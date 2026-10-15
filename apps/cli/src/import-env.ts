@@ -61,7 +61,7 @@ export function importEnvCommand() {
 				return ok(`imported ${plan.directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
 			},
 		}),
-		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

@@ -24,9 +24,8 @@ const PROBE_BUDGET_MS = 10_000;
 async function callHelper(flag: string, input: unknown, budgetMs: number): Promise<Result<unknown, string>> {
 	const path = seHelperPath();
 	if (!(await Bun.file(path).exists())) return err(`secure enclave helper not found: ${path}`);
-	// Snapshot env minus the v1 master: the helper never needs it.
-	const { JTK_MASTER: _m, ...childEnv } = process.env;
-	void _m;
+	// Snapshot the current env (Bun.spawn would otherwise use the boot-time one).
+	const childEnv = { ...process.env };
 	let proc: Bun.Subprocess<"pipe", "pipe", "pipe">;
 	try {
 		proc = Bun.spawn([path, flag], { stdin: "pipe", stdout: "pipe", stderr: "pipe", env: { ...childEnv } });

@@ -10,7 +10,6 @@ async function slotRmCore(a: { id: string }): Promise<Result<string, string>> {
 	const opened = await openData(ctxR.value);
 	if (opened.isErr()) return err(opened.error);
 	const { envelope } = opened.value;
-	if (envelope.version !== 2) return err("slots exist only in a v2 vault (see: jtk vault status)");
 	const next = removeSlot(envelope.file, a.id);
 	if (next.isErr()) return err(next.error);
 	const w = await writeVaultFile(vaultPath(ctxR.value.home), next.value);

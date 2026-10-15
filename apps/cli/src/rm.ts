@@ -28,7 +28,7 @@ export function rmCommand() {
 				return ok(`removed ${addr}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

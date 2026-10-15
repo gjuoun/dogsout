@@ -47,14 +47,13 @@ export const featureMap: FeatureMap = {
 	commands: {
 		init: {
 			tier: "stable",
-			does: "create vault.enc + config.json in JTK_HOME; master from JTK_MASTER, TTY prompt, or stdin",
+			does: "create vault.enc + config.json in JTK_HOME — no password: mints a Secure Enclave key, seals an empty vault, unlocks once (Touch ID) before reporting success",
 			gotchas: [
-				"master shorter than 8 chars is refused (legacy init-min8)",
 				"--force replaces config AND vault — tests must use temporary JTK_HOME only",
-				"JTK_VAULT_V2=1 (experimental): no password — mints a Secure Enclave key, seals a v2 envelope, unlocks once (Touch ID) before reporting success; only one factor until WebUI passkey enrollment (F3)",
+				"needs the native helper (apps/ask/build.sh → ~/.bun/bin/jtk-approve, or JTK_SE_HELPER); tests point JTK_SE_HELPER at the fake",
+				"one unlock factor only (this Mac's Touch ID) until WebUI passkey enrollment (F3)",
 			],
 			legacyFlags: { force: "init-guard" },
-			legacyKeys: ["init-master", "init-min8"],
 		},
 		set: {
 			tier: "stable",
@@ -147,13 +146,12 @@ export const featureMap: FeatureMap = {
 		},
 		vault: {
 			tier: "exp",
-			does: "vault v2 envelope: status (no unlock), migrate v1→v2, rekey, slot rm, restore a verified rolling backup",
+			does: "vault envelope: status (no unlock), rekey, slot rm, restore a verified rolling backup",
 			gotchas: [
-				"experimental: migrate (and v2 init) require JTK_VAULT_V2=1; v2 becomes default only with the F3 daemon + WebUI",
-				"until the F3 daemon every v2 vault command asks Touch ID once; cron/agents cannot unlock a v2 vault yet",
+				"a v1 (password) vault.enc is refused — cold cut 2026-10-14, no reader, no converter",
+				"until the F3 daemon every vault command asks Touch ID once; cron/agents cannot unlock the vault yet",
 				"restore promotes the state BEFORE the last write (rolling-backup semantics) and parks the broken file as vault.enc.broken",
 				"rekey drops passkey slots (no PRF output on the CLI) — re-enroll them in the WebUI",
-				"migrate keeps vault.v1.enc (password-encrypted) until the user deletes it",
 			],
 		},
 	},
@@ -162,11 +160,6 @@ export const featureMap: FeatureMap = {
 			id: "no-plaintext-default",
 			statement: "default outputs, logs and notifications never carry values; reveal is always explicit",
 			appliesTo: ["get"],
-		},
-		{
-			id: "master-not-inherited",
-			statement: "run strips JTK_MASTER from the child environment",
-			appliesTo: ["run"],
 		},
 		{
 			id: "export-refs-only",
@@ -200,16 +193,15 @@ export const featureMap: FeatureMap = {
 	],
 	vault: {
 		shape:
-			"{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — type-contracts/src/vault.ts; on disk either v1 {kdf, iv_b64, ct_b64} or v2 {vault_id, fingerprint, data, slots[]}",
+			"plaintext {version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}}; on disk the v2 envelope {version:2, vault_id, fingerprint, data, slots[]} — type-contracts/src/vault.ts",
 		crypto: [
-			"argon2id m=64MiB t=2 p=1 (hash-wasm) derives the AES-256 key",
-			"AES-256-GCM over the whole vault JSON; fresh IV per save, salt fixed per vault",
-			"envelope {kdf, iv_b64, ct_b64}; 0600 atomic write (tempfile + rename)",
-			"v2 (JTK_VAULT_V2): random DEK seals the data (AAD jtk/data/v2|vault_id); se slot = ECDH(Secure Enclave, ephemeral) → HKDF jtk/se-kek/v1 → AES-GCM wrap of the DEK; fingerprint = HKDF(DEK, jtk/fingerprint/v1)[0:4]",
-			"every write: tmp → read-back check → .bak.1→.bak.2, vault.enc→.bak.1 → rename (2 rolling backups, v1 and v2)",
+			"random 32-byte DEK, AES-256-GCM over the whole vault JSON (AAD jtk/data/v2|vault_id), fresh IV per save",
+			"se slot = ECDH(Secure Enclave, ephemeral) → HKDF jtk/se-kek/v1 → AES-GCM wrap of the DEK (AAD jtk/slot/se|vault_id|slot_id)",
+			"fingerprint = HKDF(DEK, jtk/fingerprint/v1)[0:4]; no password, no Argon2id",
+			"every write: tmp (0600) → read-back check → .bak.1→.bak.2, vault.enc→.bak.1 → rename (2 rolling backups)",
 		],
 		gotchas: [
-			"wrong master and tampering are indistinguishable (GCM auth failure) — by design",
+			"a slot moved into another vault fails its AAD check; tampering is a GCM auth failure — never plaintext",
 			"every write re-encrypts the whole vault",
 			"v2 slot metadata (kind, id, created_at, public keys) is plaintext so status never unlocks",
 		],

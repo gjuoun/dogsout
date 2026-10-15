@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 // Portable F1 acceptance, migrated from the JG-115 notebook plan.
 // Only fake values and temporary JTK_HOME directories; drives the real CLI.
+// The vault unlocks through the test-only fake Secure Enclave helper (JTK_SE_HELPER).
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REPO = join(import.meta.dir, "..");
-const MASTER = "e2e-master-pass";
+const FAKE_SE = join(REPO, "packages/core/src/vault/helper/fake-se.ts");
 let failures = 0;
 
 async function jtk(
@@ -17,7 +18,7 @@ async function jtk(
 ): Promise<{ code: number; out: string; err: string }> {
 	const proc = Bun.spawn([process.execPath, "apps/cli/src/main.ts", ...args], {
 		cwd: REPO,
-		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER, ...env },
+		env: { ...process.env, JTK_HOME: home, JTK_SE_HELPER: FAKE_SE, ...env },
 		stdout: "pipe",
 		stderr: "pipe",
 		stdin: "pipe",
@@ -48,7 +49,6 @@ const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
 const homeV2 = mkdtempSync(join(tmpdir(), "jtk-e2e-v2-"));
 const homeMig = mkdtempSync(join(tmpdir(), "jtk-e2e-mig-"));
 const fakeApprover = join(REPO, "packages/core/src/ask/helper/fake-approve.ts");
-const fakeSe = join(REPO, "packages/core/src/vault/helper/fake-se.ts");
 try {
 	const init = await jtk(home1, ["init"]);
 	const privateFiles =
@@ -181,8 +181,8 @@ try {
 		sessGrants.out,
 	);
 
-	// --- vault v2 (JTK_VAULT_V2=1) with the test-only fake Secure Enclave helper ---
-	const v2Env = { JTK_VAULT_V2: "1", JTK_SE_HELPER: fakeSe, JTK_MASTER: "" };
+	// --- vault v2 specifics: fingerprint, slots, backups, restore, rekey, fail-closed unlock ---
+	const v2Env = {};
 	const v2Init = await jtk(homeV2, ["init"], "", v2Env);
 	check(
 		v2Init.code === 0 && /vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/.test(v2Init.out),
@@ -191,11 +191,7 @@ try {
 	);
 	const v2Set = await jtk(homeV2, ["set", "jtk://dev/v2/token", "--stdin"], "tok-v2-001", v2Env);
 	const v2Get = await jtk(homeV2, ["get", "jtk://dev/v2/token", "--reveal"], "", v2Env);
-	check(
-		v2Set.code === 0 && v2Get.out.trim() === "tok-v2-001",
-		"v2: set/reveal round-trip without JTK_MASTER",
-		v2Get.err,
-	);
+	check(v2Set.code === 0 && v2Get.out.trim() === "tok-v2-001", "v2: set/reveal round-trip, no password", v2Get.err);
 	const v2Status = await jtk(homeV2, ["vault", "status"], "", v2Env);
 	check(
 		v2Status.code === 0 && v2Status.out.includes("this Mac") && v2Status.out.includes("1 unlock factor"),
@@ -234,18 +230,16 @@ try {
 		v2Deny.err,
 	);
 
-	const migInit = await jtk(homeMig, ["init"]);
-	const migSet = await jtk(homeMig, ["set", "jtk://dev/mig/token", "--stdin"], "tok-mig-1");
-	const mig = await jtk(homeMig, ["vault", "migrate"], "", { JTK_VAULT_V2: "1", JTK_SE_HELPER: fakeSe });
-	const migGet = await jtk(homeMig, ["get", "jtk://dev/mig/token", "--reveal"], "", v2Env);
+	await Bun.write(
+		join(homeMig, "vault.enc"),
+		JSON.stringify({ version: 1, kdf: { algo: "legacy-password" }, iv_b64: "x", ct_b64: "y" }),
+	);
+	await Bun.write(join(homeMig, "config.json"), JSON.stringify({ version: 1, aliases: {}, maps: {} }));
+	const v1Get = await jtk(homeMig, ["get", "jtk://dev/x/y"]);
 	check(
-		migInit.code === 0 &&
-			migSet.code === 0 &&
-			mig.code === 0 &&
-			existsSync(join(homeMig, "vault.v1.enc")) &&
-			migGet.out.trim() === "tok-mig-1",
-		"v2: migrate keeps the data and vault.v1.enc, then opens without the master",
-		mig.out + mig.err + migGet.err,
+		v1Get.code === 1 && v1Get.err.includes("no longer supported"),
+		"v1 vault file is refused (cold cut)",
+		v1Get.err,
 	);
 } finally {
 	rmSync(home1, { recursive: true, force: true });

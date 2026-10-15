@@ -39,7 +39,7 @@ export function getCommand() {
 				return ok(`sha256:${hex} (${value.value.length} bytes, --reveal to show)`);
 			},
 		}),
-		{ reads: ["config", "vault"], writes: [], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: ["config", "vault"], writes: [], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 
