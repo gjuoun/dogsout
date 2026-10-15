@@ -59,11 +59,17 @@ function corrupt(home: string): string {
 }
 
 export async function openData(ctx: Ctx): Promise<Result<{ envelope: OpenedEnvelope; data: VaultData }, string>> {
-	const rawR = await readVaultRaw(vaultPath(ctx.home));
+	return openDataAt(ctx, vaultPath(ctx.home));
+}
+
+/** Open a vault file at an explicit path (e.g. a rolling backup before `jtk vault restore` promotes it). */
+export async function openDataAt(
+	ctx: Ctx,
+	path: string,
+): Promise<Result<{ envelope: OpenedEnvelope; data: VaultData }, string>> {
+	const rawR = await readVaultRaw(path);
 	if (rawR.isErr()) {
-		return err(
-			rawR.error.kind === "corrupt" ? corrupt(ctx.home) : `vault not found: ${vaultPath(ctx.home)} — run: jtk init`,
-		);
+		return err(rawR.error.kind === "corrupt" ? corrupt(ctx.home) : `vault not found: ${path} — run: jtk init`);
 	}
 	const version = vaultFileVersion(rawR.value);
 	if (version === 1) {

@@ -2,7 +2,21 @@ import { describe, expect, test } from "bun:test";
 import type { JtkMeta } from "./cmd.ts";
 import { COMMANDS, SUBCOMMANDS } from "./commands.ts";
 
-const EXPECTED = ["init", "set", "get", "ls", "rm", "alias", "map", "run", "policy", "grants", "import-env", "export"];
+const EXPECTED = [
+	"init",
+	"set",
+	"get",
+	"ls",
+	"rm",
+	"alias",
+	"map",
+	"run",
+	"policy",
+	"grants",
+	"import-env",
+	"export",
+	"vault",
+];
 
 const metaOf = (cmd: unknown): JtkMeta | undefined => (cmd as { meta?: JtkMeta }).meta;
 const topicsOf = (cmd: unknown): Array<{ usage: string }> =>
@@ -43,7 +57,7 @@ describe("command table contract (feature map extraction)", () => {
 
 	test("leaf commands expose help topics with non-empty usage", () => {
 		for (const [name, cmd] of Object.entries(COMMANDS)) {
-			if (name === "policy" || name === "grants") continue; // groups: enumerated via SUBCOMMANDS
+			if (name === "policy" || name === "grants" || name === "vault") continue; // groups: enumerated via SUBCOMMANDS
 			const topics = topicsOf(cmd);
 			expect(topics.length, `${name}: no help topics`).toBeGreaterThan(0);
 			expect(
@@ -70,6 +84,11 @@ describe("command table contract (feature map extraction)", () => {
 				"policy simulate",
 				"policy test",
 				"policy why",
+				"vault migrate",
+				"vault rekey",
+				"vault restore",
+				"vault slot rm",
+				"vault status",
 			].sort(),
 		);
 		for (const [name, cmd] of out) {
