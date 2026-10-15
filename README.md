@@ -128,9 +128,30 @@ jtk get llm                # resolved fresh on every read — rotate upstream, s
 
 `map` overlaps with `alias`; the planned merge into a single chained-alias model is tracked as roadmap cleanup.
 
+### Vault v2: Touch ID, no password (experimental)
+
+```bash
+export JTK_VAULT_V2=1        # experimental switch; v1 (master password) stays the default
+jtk init                    # Secure Enclave key + one test unlock (Touch ID); prints the vault fingerprint
+jtk vault status            # version, fingerprint, unlock slots, backups — never unlocks
+jtk vault migrate           # existing v1 vault: old password once → v2; keeps vault.v1.enc
+jtk vault restore           # vault.enc unreadable? promote the newest verified backup
+jtk vault rekey             # suspected leak: new data key, slots re-wrapped, backups cleared
+```
+
+The native helper is the approval binary (`apps/ask/build.sh` → `~/.bun/bin/jtk-approve`, `--se-*` modes). Every write keeps two rolling backups (`vault.enc.bak.1`, `.bak.2`) — the state before the last two writes.
+
 ## Current security boundary
 
 F1 is a local vault tool, not yet a policy/approval boundary; it does not defend against an already-compromised same-uid process. `run` strips inherited `JTK_MASTER`, but explicit injection of that name can restore it. Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
+
+Vault v2 (experimental, `JTK_VAULT_V2=1`):
+
+- The unlock key lives in this Mac's Secure Enclave and never leaves the chip; jtk stores only its public key and a chip-bound handle. **The Touch ID slot dies with the Mac** (reinstall, logic-board swap). Until passkey enrollment lands with the F3 WebUI, a v2 vault has exactly one factor — losing the Mac loses the vault. Keep v1 for anything you cannot afford to lose.
+- `.userPresence` falls back to the macOS login password when Touch ID is unavailable — the same boundary as the login itself.
+- Until the F3 daemon, every v2 command asks Touch ID once and cron/agents cannot unlock a v2 vault.
+- Planned (F3): passkey slots via WebAuthn PRF. A synced passkey (iCloud Keychain, 1Password…) puts that provider's account inside the trust boundary — an attacker needs both the account and a copy of `vault.enc`.
+- Rolling backups are whole-file ciphertext copies on the same disk: they protect against a bad write, not against losing the Mac. A removed slot can still open them until rotated out — use `jtk vault rekey` after a suspected leak.
 
 ## Why
 
