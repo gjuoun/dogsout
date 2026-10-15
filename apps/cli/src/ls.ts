@@ -27,7 +27,7 @@ export function lsCommand() {
 				return ok(json ? JSON.stringify({ vaults: summary }, null, 2) : lines.join("\n"));
 			},
 		}),
-		{ reads: ["vault"], writes: [], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: ["vault"], writes: [], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

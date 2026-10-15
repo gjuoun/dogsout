@@ -27,9 +27,8 @@ export const swiftuiChannel: Channel = {
 		let proc: Bun.Subprocess<"ignore", "pipe", "inherit">;
 		try {
 			// Bun.spawn without explicit env uses the boot-time environment, missing runtime mutations;
-			// pass a snapshot minus the master (the helper never needs it).
-			const { JTK_MASTER: _m, ...childEnv } = process.env;
-			void _m;
+			// pass a snapshot of the current one.
+			const childEnv = { ...process.env };
 			proc = Bun.spawn([path, "--request", tmp], {
 				stdin: "ignore",
 				stdout: "pipe",

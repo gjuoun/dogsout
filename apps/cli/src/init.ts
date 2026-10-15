@@ -3,39 +3,30 @@ import { command, flag } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { defaultIo, fail, type Io, runJtk, withMeta } from "./cmd.ts";
 
-/** Interactive prompt when no JTK_MASTER and we have a TTY (reads one line, not EOF). */
-async function readMasterInteractive(): Promise<string> {
-	const { createInterface } = await import("node:readline");
-	const rl = createInterface({ input: process.stdin, output: process.stdout });
-	const answer = await new Promise<string>((resolve) => {
-		rl.question("master password (min 8 chars): ", (a: string) => resolve(a));
-	});
-	rl.close();
-	return answer.trim();
-}
-
-export function initCommand(io: Io = defaultIo) {
+/**
+ * init: no password. Mints a Secure Enclave key, seals an empty vault under a fresh DEK and
+ * unlocks it once (Touch ID) before reporting success. `io` is kept for the shared command seam.
+ */
+export function initCommand(_io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "init",
-			description: "create vault.enc + config.json (master via JTK_MASTER, prompt, or stdin)",
+			description: "create vault.enc + config.json — Touch ID (Secure Enclave), no password",
 			args: { force: flag({ long: "force", description: "reset an already-initialized home (destructive)" }) },
 			handler: async ({ force }): Promise<Result<string, string>> => {
 				const home = jtkHome();
 				if ((await Bun.file(configPath(home)).exists()) && !force) {
 					return fail(`already initialized: ${configPath(home)} (use --force to reset)`);
 				}
-				let master = process.env.JTK_MASTER;
-				if (!master) {
-					master = process.stdin.isTTY ? await readMasterInteractive() : (await io.stdin()).trim();
-				}
-				if (!master || master.length < 8) return fail("master password too short (min 8)");
-				const r = await initFiles(home, master);
+				const r = await initFiles(home);
 				if (r.isErr()) return err(r.error);
-				return ok(`initialized ${home}`);
+				return ok(
+					`initialized ${home} (vault v2, fingerprint ${r.value.fingerprint})\n` +
+						"warning: one unlock factor only (this Mac's Touch ID) — losing this Mac loses the vault until passkey enrollment lands with the WebUI (F3)",
+				);
 			},
 		}),
-		{ reads: [], writes: ["config", "vault"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: [], writes: ["config", "vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

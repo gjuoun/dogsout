@@ -47,13 +47,13 @@ export const featureMap: FeatureMap = {
 	commands: {
 		init: {
 			tier: "stable",
-			does: "create vault.enc + config.json in JTK_HOME; master from JTK_MASTER, TTY prompt, or stdin",
+			does: "create vault.enc + config.json in JTK_HOME — no password: mints a Secure Enclave key, seals an empty vault, unlocks once (Touch ID) before reporting success",
 			gotchas: [
-				"master shorter than 8 chars is refused (legacy init-min8)",
 				"--force replaces config AND vault — tests must use temporary JTK_HOME only",
+				"needs the native helper (apps/ask/build.sh → ~/.bun/bin/jtk-approve, or JTK_SE_HELPER); tests point JTK_SE_HELPER at the fake",
+				"one unlock factor only (this Mac's Touch ID) until WebUI passkey enrollment (F3)",
 			],
 			legacyFlags: { force: "init-guard" },
-			legacyKeys: ["init-master", "init-min8"],
 		},
 		set: {
 			tier: "stable",
@@ -144,17 +144,22 @@ export const featureMap: FeatureMap = {
 			does: "inspect and revoke approvals — metadata only, never values",
 			legacyKeys: ["grants-meta", "session-model", "session-resume"],
 		},
+		vault: {
+			tier: "exp",
+			does: "vault envelope: status (no unlock), rekey, slot rm, restore a verified rolling backup",
+			gotchas: [
+				"a v1 (password) vault.enc is refused — cold cut 2026-10-14, no reader, no converter",
+				"until the F3 daemon every vault command asks Touch ID once; cron/agents cannot unlock the vault yet",
+				"restore promotes the state BEFORE the last write (rolling-backup semantics) and parks the broken file as vault.enc.broken",
+				"rekey drops passkey slots (no PRF output on the CLI) — re-enroll them in the WebUI",
+			],
+		},
 	},
 	invariants: [
 		{
 			id: "no-plaintext-default",
 			statement: "default outputs, logs and notifications never carry values; reveal is always explicit",
 			appliesTo: ["get"],
-		},
-		{
-			id: "master-not-inherited",
-			statement: "run strips JTK_MASTER from the child environment",
-			appliesTo: ["run"],
 		},
 		{
 			id: "export-refs-only",
@@ -167,20 +172,38 @@ export const featureMap: FeatureMap = {
 			appliesTo: ["run", "grants", "policy"],
 		},
 		{
+			id: "v2-at-least-one-slot",
+			statement: "a v2 vault always keeps at least one unlock slot; removing the last slot is refused",
+			appliesTo: ["vault"],
+		},
+		{
+			id: "backup-verified-before-rotate",
+			statement: "a write is read back before it replaces vault.enc; a failed write never rotates or replaces anything",
+			appliesTo: ["set", "rm", "import-env", "vault"],
+		},
+		{
+			id: "unlock-fail-closed",
+			statement: "no usable slot, cancelled Touch ID or a failing helper denies — never a fallback to a weaker factor",
+			appliesTo: ["get", "run", "set", "ls", "rm", "vault"],
+		},
+		{
 			id: "tests-use-temp-home",
 			statement: "tests and manual checks use a temporary JTK_HOME with fake credentials, never the real vault",
 		},
 	],
 	vault: {
-		shape: "{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — type-contracts/src/vault.ts",
+		shape:
+			"plaintext {version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}}; on disk the v2 envelope {version:2, vault_id, fingerprint, data, slots[]} — type-contracts/src/vault.ts",
 		crypto: [
-			"argon2id m=64MiB t=2 p=1 (hash-wasm) derives the AES-256 key",
-			"AES-256-GCM over the whole vault JSON; fresh IV per save, salt fixed per vault",
-			"envelope {kdf, iv_b64, ct_b64}; 0600 atomic write (tempfile + rename)",
+			"random 32-byte DEK, AES-256-GCM over the whole vault JSON (AAD jtk/data/v2|vault_id), fresh IV per save",
+			"se slot = ECDH(Secure Enclave, ephemeral) → HKDF jtk/se-kek/v1 → AES-GCM wrap of the DEK (AAD jtk/slot/se|vault_id|slot_id)",
+			"fingerprint = HKDF(DEK, jtk/fingerprint/v1)[0:4]; no password, no Argon2id",
+			"every write: tmp (0600) → read-back check → .bak.1→.bak.2, vault.enc→.bak.1 → rename (2 rolling backups)",
 		],
 		gotchas: [
-			"wrong master and tampering are indistinguishable (GCM auth failure) — by design",
+			"a slot moved into another vault fails its AAD check; tampering is a GCM auth failure — never plaintext",
 			"every write re-encrypts the whole vault",
+			"v2 slot metadata (kind, id, created_at, public keys) is plaintext so status never unlocks",
 		],
 	},
 	components: [
@@ -196,6 +219,18 @@ export const featureMap: FeatureMap = {
 			path: "src/session/",
 			tier: "exp",
 			note: "grants.json / sessions.json, 0600 atomic, metadata only",
+		},
+		{
+			name: "vault v2 envelope",
+			path: "src/vault/envelope.ts",
+			tier: "exp",
+			note: "pure DEK/slot crypto; the Secure Enclave is injected as an ECDH function",
+		},
+		{
+			name: "secure enclave helper client",
+			path: "src/vault/se.ts",
+			tier: "exp",
+			note: "spawns jtk-approve --se-* per call (JTK_SE_HELPER override; test fake in src/vault/helper/fake-se.ts)",
 		},
 		{
 			name: "api skeleton",

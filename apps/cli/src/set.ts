@@ -34,7 +34,7 @@ export function setCommand(io: Io = defaultIo) {
 				return ok(`set ${formatAddress(parsed.value)}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

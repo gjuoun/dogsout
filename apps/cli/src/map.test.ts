@@ -9,14 +9,14 @@ import { runInit } from "./init.ts";
 import { runMap } from "./map.ts";
 import { runSet } from "./set.ts";
 
-const MASTER = "map-test-master";
+const FAKE_SE = join(import.meta.dir, "..", "..", "..", "packages", "core", "src", "vault", "helper", "fake-se.ts");
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 let home = "";
 
 beforeAll(async () => {
 	home = mkdtempSync(join(tmpdir(), "jtk-map-"));
 	process.env.JTK_HOME = home;
-	process.env.JTK_MASTER = MASTER;
+	process.env.JTK_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
 	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-v1"));
 	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
@@ -24,7 +24,7 @@ beforeAll(async () => {
 
 afterAll(() => {
 	delete process.env.JTK_HOME;
-	delete process.env.JTK_MASTER;
+	delete process.env.JTK_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 

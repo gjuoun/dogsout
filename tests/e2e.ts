@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 // Portable F1 acceptance, migrated from the JG-115 notebook plan.
 // Only fake values and temporary JTK_HOME directories; drives the real CLI.
+// The vault unlocks through the test-only fake Secure Enclave helper (JTK_SE_HELPER).
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REPO = join(import.meta.dir, "..");
-const MASTER = "e2e-master-pass";
+const FAKE_SE = join(REPO, "packages/core/src/vault/helper/fake-se.ts");
 let failures = 0;
 
 async function jtk(
@@ -17,7 +18,7 @@ async function jtk(
 ): Promise<{ code: number; out: string; err: string }> {
 	const proc = Bun.spawn([process.execPath, "apps/cli/src/main.ts", ...args], {
 		cwd: REPO,
-		env: { ...process.env, JTK_HOME: home, JTK_MASTER: MASTER, ...env },
+		env: { ...process.env, JTK_HOME: home, JTK_SE_HELPER: FAKE_SE, ...env },
 		stdout: "pipe",
 		stderr: "pipe",
 		stdin: "pipe",
@@ -45,6 +46,8 @@ const home2 = mkdtempSync(join(tmpdir(), "jtk-e2e-2-"));
 const homeAsk = mkdtempSync(join(tmpdir(), "jtk-e2e-ask-"));
 const homeDeny = mkdtempSync(join(tmpdir(), "jtk-e2e-deny-"));
 const homeSess = mkdtempSync(join(tmpdir(), "jtk-e2e-sess-"));
+const homeV2 = mkdtempSync(join(tmpdir(), "jtk-e2e-v2-"));
+const homeMig = mkdtempSync(join(tmpdir(), "jtk-e2e-mig-"));
 const fakeApprover = join(REPO, "packages/core/src/ask/helper/fake-approve.ts");
 try {
 	const init = await jtk(home1, ["init"]);
@@ -177,11 +180,74 @@ try {
 		"session: end withdraws session grants",
 		sessGrants.out,
 	);
+
+	// --- vault v2 specifics: fingerprint, slots, backups, restore, rekey, fail-closed unlock ---
+	const v2Env = {};
+	const v2Init = await jtk(homeV2, ["init"], "", v2Env);
+	check(
+		v2Init.code === 0 && /vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/.test(v2Init.out),
+		"v2: init needs no password and prints the fingerprint",
+		v2Init.out + v2Init.err,
+	);
+	const v2Set = await jtk(homeV2, ["set", "jtk://dev/v2/token", "--stdin"], "tok-v2-001", v2Env);
+	const v2Get = await jtk(homeV2, ["get", "jtk://dev/v2/token", "--reveal"], "", v2Env);
+	check(v2Set.code === 0 && v2Get.out.trim() === "tok-v2-001", "v2: set/reveal round-trip, no password", v2Get.err);
+	const v2Status = await jtk(homeV2, ["vault", "status"], "", v2Env);
+	check(
+		v2Status.code === 0 && v2Status.out.includes("this Mac") && v2Status.out.includes("1 unlock factor"),
+		"v2: vault status shows one se slot and the single-factor warning",
+		v2Status.out + v2Status.err,
+	);
+	await jtk(homeV2, ["set", "jtk://dev/v2/b", "--stdin"], "tok-b", v2Env);
+	await jtk(homeV2, ["set", "jtk://dev/v2/c", "--stdin"], "tok-c", v2Env);
+	check(
+		existsSync(join(homeV2, "vault.enc.bak.1")) && existsSync(join(homeV2, "vault.enc.bak.2")),
+		"v2: writes keep two rolling backups",
+		"missing vault.enc.bak.1/2",
+	);
+	await Bun.write(join(homeV2, "vault.enc"), "{ broken");
+	const v2Broken = await jtk(homeV2, ["get", "jtk://dev/v2/token"], "", v2Env);
+	const v2Restore = await jtk(homeV2, ["vault", "restore"], "", v2Env);
+	const v2After = await jtk(homeV2, ["get", "jtk://dev/v2/token", "--reveal"], "", v2Env);
+	check(
+		v2Broken.code !== 0 &&
+			v2Broken.err.includes("jtk vault restore") &&
+			v2Restore.code === 0 &&
+			v2After.out.trim() === "tok-v2-001",
+		"v2: corrupt vault.enc is reported, restore promotes the backup",
+		v2Broken.err + v2Restore.out + v2Restore.err + v2After.err,
+	);
+	const v2Rekey = await jtk(homeV2, ["vault", "rekey"], "", v2Env);
+	check(
+		v2Rekey.code === 0 && !existsSync(join(homeV2, "vault.enc.bak.1")) && !existsSync(join(homeV2, "vault.enc.bak.2")),
+		"v2: rekey clears the backups",
+		v2Rekey.out + v2Rekey.err,
+	);
+	const v2Deny = await jtk(homeV2, ["get", "jtk://dev/v2/token"], "", { ...v2Env, FAKE_SE_MODE: "deny" });
+	check(
+		v2Deny.code === 1 && v2Deny.err.includes("vault unlock failed"),
+		"v2: cancelled Touch ID fails closed",
+		v2Deny.err,
+	);
+
+	await Bun.write(
+		join(homeMig, "vault.enc"),
+		JSON.stringify({ version: 1, kdf: { algo: "legacy-password" }, iv_b64: "x", ct_b64: "y" }),
+	);
+	await Bun.write(join(homeMig, "config.json"), JSON.stringify({ version: 1, aliases: {}, maps: {} }));
+	const v1Get = await jtk(homeMig, ["get", "jtk://dev/x/y"]);
+	check(
+		v1Get.code === 1 && v1Get.err.includes("no longer supported"),
+		"v1 vault file is refused (cold cut)",
+		v1Get.err,
+	);
 } finally {
 	rmSync(home1, { recursive: true, force: true });
 	rmSync(home2, { recursive: true, force: true });
 	rmSync(homeAsk, { recursive: true, force: true });
 	rmSync(homeDeny, { recursive: true, force: true });
 	rmSync(homeSess, { recursive: true, force: true });
+	rmSync(homeV2, { recursive: true, force: true });
+	rmSync(homeMig, { recursive: true, force: true });
 }
 if (failures) process.exit(1);

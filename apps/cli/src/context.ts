@@ -1,16 +1,14 @@
-import { type Ctx, jtkHome, loadConfig, loadSessions, masterFromEnv, openData } from "@jtk/core";
+import { type Ctx, jtkHome, loadConfig, loadSessions, openData } from "@jtk/core";
 import type { Config, VaultData } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /**
  * The app's storage context: the `Ctx` a vault-touching command needs, resolved from the
  * environment. Shared by the crud, run and policy command modules, so it lives here rather
- * than inside any one of them.
+ * than inside any one of them. There is no password: the vault unlocks through the Secure Enclave.
  */
 export function ctxFromEnv(): Result<Ctx, string> {
-	const master = masterFromEnv();
-	if (master.isErr()) return err(master.error);
-	return ok({ home: jtkHome(), master: master.value });
+	return ok({ home: jtkHome() });
 }
 
 /** Read the vault once, for a caller that is not writing it back. */

@@ -6,11 +6,11 @@ import { err, ok } from "neverthrow";
 import { parseAddress } from "../address.ts";
 import { loadGrants } from "../session/grants.ts";
 import { initFiles, loadConfig, nowIso, openData, saveData, writeConfig } from "../store.ts";
+import { SE_HELPER_ENV } from "../vault/se.ts";
 import type { Channel } from "./channel.ts";
 import { prepareRun } from "./flow.ts";
 import { HELPER_ENV, swiftuiChannel } from "./swiftui.ts";
 
-const MASTER = "ask-flow-master";
 const ADDRESS = "jtk://dev/zai/api_key";
 const ALIAS = "ZAI_API_KEY";
 let home = "";
@@ -20,7 +20,7 @@ let fakeHelper = "";
 async function seedValue(value: string): Promise<void> {
 	const parsed = parseAddress(ADDRESS);
 	if (parsed.isErr()) throw new Error(parsed.error);
-	const ctx = { home, master: MASTER };
+	const ctx = { home };
 	const opened = await openData(ctx);
 	if (opened.isErr()) throw new Error(opened.error);
 	const { envelope, data } = opened.value;
@@ -79,8 +79,8 @@ const broken: Channel = {
 beforeAll(async () => {
 	home = mkdtempSync(join(tmpdir(), "jtk-ask-"));
 	process.env.JTK_HOME = home;
-	process.env.JTK_MASTER = MASTER;
-	const init = await initFiles(home, MASTER);
+	process.env[SE_HELPER_ENV] = join(import.meta.dir, "..", "vault", "helper", "fake-se.ts");
+	const init = await initFiles(home);
 	if (init.isErr()) throw new Error(init.error);
 	await seedValue("sk-ask-me");
 	await seedAlias();
@@ -93,14 +93,14 @@ beforeAll(async () => {
 
 afterAll(() => {
 	delete process.env.JTK_HOME;
-	delete process.env.JTK_MASTER;
+	delete process.env[SE_HELPER_ENV];
 	delete process.env[HELPER_ENV];
 	delete process.env.FAKE_APPROVE_MODE;
 	rmSync(home, { recursive: true, force: true });
 });
 
 async function open() {
-	const opened = await openData({ home, master: MASTER });
+	const opened = await openData({ home });
 	if (opened.isErr()) throw new Error(opened.error);
 	return opened.value.data;
 }

@@ -14,9 +14,10 @@
 git clone https://github.com/gjuoun/junethekey && cd junethekey
 bun install
 cd apps/cli && bun link    # puts jtk on PATH (~/.bun/bin/jtk)
+cd ../.. && bash apps/ask/build.sh   # native helper ~/.bun/bin/jtk-approve: approval window + Secure Enclave unlock
 ```
 
-Requires [Bun](https://bun.sh) on PATH. Uninstall with `cd apps/cli && bun unlink`.
+Requires [Bun](https://bun.sh) on PATH and macOS with a Secure Enclave (Apple silicon or T2) — the vault unlocks with Touch ID, there is no master password. Uninstall with `cd apps/cli && bun unlink`.
 
 ## Repo layout
 
@@ -37,11 +38,8 @@ Dependencies are one-way — `apps/*` → `packages/*`. An app never imports ano
 ### Setup
 
 ```bash
-# JTK_HOME selects storage (default ~/.config/junethekey); vault operations use JTK_MASTER
-# export/help do not decrypt or require the master
-export JTK_MASTER="a-long-master-passphrase"
-
-jtk init   # create vault.enc (AES-256-GCM, argon2id) + config.json
+# JTK_HOME selects storage (default ~/.config/junethekey); there is no password
+jtk init   # Secure Enclave key + vault.enc + config.json; one Touch ID to prove the slot opens
 ```
 
 ### Vault basics
@@ -72,7 +70,7 @@ printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only �
 jtk run --from-env app.env -- ./deploy.sh
 ```
 
-`run` strips the inherited `JTK_MASTER` from the child environment; exit code is the child's.
+`run` exits with the child's exit code.
 
 ### .env migration round-trip
 
@@ -128,9 +126,27 @@ jtk get llm                # resolved fresh on every read — rotate upstream, s
 
 `map` overlaps with `alias`; the planned merge into a single chained-alias model is tracked as roadmap cleanup.
 
+### Vault: Touch ID, no password
+
+```bash
+jtk vault status            # fingerprint, unlock slots, backups — never unlocks
+jtk vault restore           # vault.enc unreadable? promote the newest verified backup
+jtk vault rekey             # suspected leak: new data key, slots re-wrapped, backups cleared
+```
+
+The native helper is the approval binary (`apps/ask/build.sh` → `~/.bun/bin/jtk-approve`, `--se-*` modes; `JTK_SE_HELPER` overrides the path). Every write keeps two rolling backups (`vault.enc.bak.1`, `.bak.2`) — the state before the last two writes. A pre-2026-10-14 password vault (`version: 1`) is refused; re-create it with `jtk init --force`.
+
 ## Current security boundary
 
-F1 is a local vault tool, not yet a policy/approval boundary; it does not defend against an already-compromised same-uid process. `run` strips inherited `JTK_MASTER`, but explicit injection of that name can restore it. Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
+jtk is a local vault tool, not yet a broker boundary; it does not defend against an already-compromised same-uid process. Input files and child programs may persist values; jtk's lack of a plaintext cache is not a guarantee about them.
+
+Vault unlock:
+
+- The unlock key lives in this Mac's Secure Enclave and never leaves the chip; jtk stores only its public key and a chip-bound handle. There is no master password and nothing offline-crackable in `vault.enc`. **The Touch ID slot dies with the Mac** (reinstall, logic-board swap). Until passkey enrollment lands with the F3 WebUI, the vault has exactly one factor — losing the Mac loses the vault.
+- `.userPresence` falls back to the macOS login password when Touch ID is unavailable — the same boundary as the login itself.
+- Until the F3 daemon, every vault command asks Touch ID once, and cron/agents/SSH sessions cannot unlock the vault.
+- Planned (F3): passkey slots via WebAuthn PRF. A synced passkey (iCloud Keychain, 1Password…) puts that provider's account inside the trust boundary — an attacker needs both the account and a copy of `vault.enc`.
+- Rolling backups are whole-file ciphertext copies on the same disk: they protect against a bad write, not against losing the Mac. A removed slot can still open them until rotated out — use `jtk vault rekey` after a suspected leak.
 
 ## Why
 
