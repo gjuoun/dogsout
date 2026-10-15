@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { loadConfig, writeConfig } from "@jtk/core";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
-import { runRun } from "./cmd-run.ts";
 import { runInit } from "./init.ts";
+import { runRun } from "./run.ts";
 import { runSet } from "./set.ts";
 
 const MASTER = "run-test-master";
