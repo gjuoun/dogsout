@@ -1,26 +1,27 @@
 import { hostname } from "node:os";
 import type { Config, VaultData } from "@jtk/contracts";
 import { SessionManifestSchema } from "@jtk/contracts";
-import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
-import { err, ok, type Result } from "neverthrow";
-import { cliChannel } from "../ask/cli.ts";
 import {
+	cliChannel,
 	closeSessionFlow,
+	grantUsable,
+	loadConfig,
+	loadGrants,
 	openSessionFlow,
+	parseEnvFile,
 	prepareRun,
 	readVaultValue,
+	recordApproval,
 	recordApprovalsFlow,
+	resolveToAddress,
 	resumeReplayFlow,
 	sha256Hex,
-} from "../ask/flow.ts";
-import { swiftuiChannel } from "../ask/swiftui.ts";
-import { grantUsable } from "../policy/evaluate.ts";
-import { loadGrants, recordApproval } from "../session/grants.ts";
-import { parseEnvFile } from "../vault/io.ts";
+	swiftuiChannel,
+} from "@jtk/core";
+import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
+import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
-import { resolveToAddress } from "./resolve.ts";
-import { loadConfig } from "./store.ts";
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
