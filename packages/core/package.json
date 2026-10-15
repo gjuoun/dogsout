@@ -9,8 +9,7 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"test": "bun test"
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@jtk/contracts": "workspace:*",
