@@ -4,7 +4,7 @@
 
 `jtk` is a local-first, open-source credential broker: a daemon holds your secrets and releases them to agents (or humans) only under a human-tunable policy — allow / ask / deny, per principal × credential × moment — with short-lived grants, a tamper-evident audit log, and one-tap approval from your phone. Values never leave your machine.
 
-> **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts).
+> **Status: F1 + F2 shipped** — the `jtk` CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts).
 
 ## Install (dev)
 
@@ -17,6 +17,20 @@ cd apps/cli && bun link    # puts jtk on PATH (~/.bun/bin/jtk)
 ```
 
 Requires [Bun](https://bun.sh) on PATH. Uninstall with `cd apps/cli && bun unlink`.
+
+## Repo layout
+
+Five packages, split along process boundaries — the seams an agent actually crosses:
+
+| package | what it holds |
+|---|---|
+| `apps/cli` | the command layer and `bin: jtk` |
+| `apps/api` | Hono/OpenAPI server — the seed of the F3 daemon |
+| `apps/ask` | the native macOS approval window (Swift), plus its design mockup |
+| `packages/core` | the broker engine: vault, policy, session, the ask flow |
+| `packages/type-contracts` | the zod single source for every shape that crosses a boundary |
+
+Dependencies are one-way — `apps/*` → `packages/*`. An app never imports another app, and nothing in `packages/core` reaches back into `apps/`. The approval protocol has two declared homes: the wire half (the JSON that crosses into `apps/ask`) is `packages/type-contracts/src/ask.ts`; the in-process half (the `Channel` interface and its degradation chain) is `packages/core/src/ask/channel.ts`.
 
 ## Usage guide
 
@@ -93,7 +107,7 @@ jtk grants ls                      # what is live, and for how long
 jtk grants rm ZAI_API_KEY          # revoke -> next run asks again
 ```
 
-The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/ask/helper/jtk-approve.swift`, build with `apps/ask/build.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
+The approval window is the validated [SwiftUI mockup](apps/ask/mockups/jtk-approve.swift) turned into a real helper (`apps/ask/helper/jtk-approve.swift`, build with `apps/ask/build.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
 
 ### Sessions
 
@@ -153,7 +167,7 @@ Target broker comparison; identity, policy, tokens and audit below are not F1 ca
 
 | Milestone | Scope | State |
 |---|---|---|
-| F1 | Local monolith CLI | shipped |
+| F1 | Local CLI — the pre-split monolith | shipped |
 | F2 | Policy engine (rules, TTL grants, sessions, local approval) | shipped |
 | F3 | Local broker and phone approval | next |
 | F4 | Scoped tokens | planned |
@@ -163,7 +177,7 @@ Milestones are groups, not a dependency order. Shipped means locally available, 
 
 ## Contributing
 
-Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts) in the same diff.
+Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass — CI runs `bun run test` (turbo, per package) *and* `bun test` (whole tree) on purpose, so a suite reachable from only one of them shows up as a count mismatch. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts) in the same diff.
 
 ## License
 
