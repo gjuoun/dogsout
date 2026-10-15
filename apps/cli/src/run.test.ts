@@ -3,9 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig, writeConfig } from "@jtk/core";
+import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
-import { runAlias, runInit, runSet } from "./cmd-crud.ts";
 import { runRun } from "./cmd-run.ts";
+import { runInit } from "./init.ts";
+import { runSet } from "./set.ts";
 
 const MASTER = "run-test-master";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });

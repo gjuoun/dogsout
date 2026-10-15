@@ -1,6 +1,11 @@
 import { runSafely } from "cmd-ts";
 import { err, type Result } from "neverthrow";
 
+/** Fail a command handler on a plain message (Result plumbing shared by every command). */
+export function fail(message: string): Result<never, string> {
+	return err(message);
+}
+
 /** Resources a command can touch — the feature map's reads/writes vocabulary. */
 export type Resource = "config" | "vault" | "grants" | "sessions";
 
