@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { jtkHome, loadConfig } from "@jtk/core";
 import type { Io } from "./cmd.ts";
-import { runExport, runImportEnv } from "./cmd-io.ts";
+import { runExport } from "./export.ts";
+import { runImportEnv } from "./import-env.ts";
 import { runInit } from "./init.ts";
 
 const MASTER = "io-test-master";
