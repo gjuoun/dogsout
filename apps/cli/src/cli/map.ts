@@ -1,8 +1,7 @@
+import { jtkHome, loadConfig, writeConfig } from "@jtk/core";
 import { command, flag, optional, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
-import { jtkHome } from "./paths.ts";
-import { loadConfig, writeConfig } from "./store.ts";
 
 export function mapCommand() {
 	return withMeta(
