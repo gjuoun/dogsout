@@ -18,4 +18,5 @@ export * from "./session/session.ts";
 export * from "./store.ts";
 export * from "./vault/envelope.ts";
 export * from "./vault/io.ts";
+export * from "./vault/se.ts";
 export * from "./vault/vault.ts";
