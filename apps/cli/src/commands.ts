@@ -23,6 +23,12 @@ import { whyCommand } from "./policy/why.ts";
 import { rmCommand } from "./rm.ts";
 import { runCommand } from "./run.ts";
 import { setCommand } from "./set.ts";
+import { vaultMigrateCommand } from "./vault/migrate.ts";
+import { vaultRekeyCommand } from "./vault/rekey.ts";
+import { vaultRestoreCommand } from "./vault/restore.ts";
+import { vaultSlotRmCommand } from "./vault/slot-rm.ts";
+import { vaultStatusCommand } from "./vault/status.ts";
+import { vaultCommand } from "./vault/vault.ts";
 
 /** The importable command table: notebook feature map ctx/check consumes this. */
 export const COMMANDS = {
@@ -38,6 +44,7 @@ export const COMMANDS = {
 	grants: grantsCommand(),
 	"import-env": importEnvCommand(),
 	export: exportCommand(),
+	vault: vaultCommand(),
 } as const;
 
 /**
@@ -59,5 +66,12 @@ export const SUBCOMMANDS = {
 	grants: {
 		ls: grantsLsCommand(),
 		rm: grantsRmCommand(),
+	},
+	vault: {
+		status: vaultStatusCommand(),
+		migrate: vaultMigrateCommand(),
+		rekey: vaultRekeyCommand(),
+		restore: vaultRestoreCommand(),
+		slot: { rm: vaultSlotRmCommand() },
 	},
 } as const;
