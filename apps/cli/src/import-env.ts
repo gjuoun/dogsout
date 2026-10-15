@@ -1,7 +1,8 @@
-import { jtkHome, loadConfig, masterFromEnv, nowIso, openData, parseEnvFile, saveData, writeConfig } from "@jtk/core";
+import { loadConfig, nowIso, openData, parseEnvFile, saveData, writeConfig } from "@jtk/core";
 import { command, option, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";
+import { ctxFromEnv } from "./context.ts";
 
 export function importEnvCommand() {
 	return withMeta(
@@ -32,10 +33,11 @@ export function importEnvCommand() {
 				}
 				const plan = parseEnvFile(text);
 
-				const master = masterFromEnv();
-				if (master.isErr()) return err(master.error);
-				const home = jtkHome();
-				const opened = await openData({ home, master: master.value });
+				const ctxR = ctxFromEnv();
+				if (ctxR.isErr()) return err(ctxR.error);
+				const ctx = ctxR.value;
+				const home = ctx.home;
+				const opened = await openData(ctx);
 				if (opened.isErr()) return err(opened.error);
 				const { envelope, data } = opened.value;
 				data.vaults[vault] ??= {};
@@ -43,7 +45,7 @@ export function importEnvCommand() {
 				if (!items[item]) items[item] = { fields: {}, updated_at: nowIso() };
 				for (const d of plan.directs) items[item].fields[d.key] = d.value;
 				items[item].updated_at = nowIso();
-				const saved = await saveData({ home, master: master.value }, envelope, data);
+				const saved = await saveData(ctx, envelope, data);
 				if (saved.isErr()) return err(saved.error);
 
 				if (plan.refs.length > 0) {
@@ -59,7 +61,7 @@ export function importEnvCommand() {
 				return ok(`imported ${plan.directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
 			},
 		}),
-		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
 	);
 }
 

@@ -90,10 +90,11 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 	if (names.length > 0) {
 		const ctxR = ctxFromEnv();
 		if (ctxR.isErr()) return err(ctxR.error);
-		const { home, master } = ctxR.value;
+		const ctx = ctxR.value;
+		const home = ctx.home;
 		const cfg = await loadConfig(home);
 		if (cfg.isErr()) return err(cfg.error);
-		const opened = await openDataOnce({ home, master });
+		const opened = await openDataOnce(ctx);
 		if (opened.isErr()) return err(opened.error);
 
 		const principal = a.principal ?? principalFromEnv();
@@ -180,11 +181,8 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 		}
 	}
 
-	// strip JTK_MASTER: the master password must not leak into child env (agent-run commands)
-	const { JTK_MASTER: _stripped, ...parentEnv } = process.env;
-	void _stripped;
 	const proc = Bun.spawn(cmd, {
-		env: { ...parentEnv, ...inject },
+		env: { ...process.env, ...inject },
 		stdout: "inherit",
 		stderr: "inherit",
 	});
@@ -213,7 +211,7 @@ export function runCommand() {
 		{
 			reads: ["vault", "config", "grants", "sessions"],
 			writes: ["grants", "sessions"],
-			env: ["JTK_HOME", "JTK_MASTER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
+			env: ["JTK_HOME", "JTK_SE_HELPER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
 		},
 	);
 }

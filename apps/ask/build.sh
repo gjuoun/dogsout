@@ -9,3 +9,5 @@ codesign --force --sign - "$out" 2>/dev/null || true
 echo "built $out"
 echo "selftest:"
 "$out" --selftest
+echo "se-selftest:"
+"$out" --se-selftest

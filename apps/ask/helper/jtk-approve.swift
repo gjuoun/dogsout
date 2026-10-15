@@ -1,11 +1,13 @@
 // jtk-approve — F2 single-person local approval window (stateless SwiftUI helper).
 // Contract (packages/type-contracts/src/ask.ts): jtk writes AskRequest JSON -> launches helper -> Decision JSON on stdout -> exit.
 // Closing the window is fail-closed: bare deny. --selftest prints a deterministic literal, no window.
+// --se-* modes serve the vault v2 Secure Enclave slot (see the block above --request).
 // Build: apps/ask/build.sh (swiftc -O, ad-hoc signing). CI (linux) never builds this file.
 
 import SwiftUI
 import Foundation
 import LocalAuthentication
+import CryptoKit
 
 struct AskedKey: Codable {
 	let alias: String
@@ -56,6 +58,87 @@ if CommandLine.arguments.contains("--selftest") {
 	exit(0)
 }
 
+// --se-*: Secure Enclave mode for the vault v2 Touch ID slot (PRD §2.1). JSON over stdin/stdout, no window.
+//   --se-create            -> {"blob","pub"}  P-256 key minted inside the SE (.privateKeyUsage + .userPresence); no keychain
+//   --se-ecdh  <- {"blob","peer","reason"} -> {"shared"}  Touch ID (login-password fallback), only the shared secret leaves
+//   --se-probe <- {"blob"} -> {"usable"}  never shows UI (interactionNotAllowed); a foreign blob is false
+//   --se-selftest          -> {"se":"ok"}  create + non-interactive probe, no Touch ID
+// A tampered blob can make CryptoKit trap: jtk runs every call in its own process and treats a crash as failure.
+func seFail(_ msg: String) -> Never {
+	FileHandle.standardError.write(("jtk-approve: " + msg + "\n").data(using: .utf8)!)
+	exit(1)
+}
+
+func seEmit(_ obj: [String: Any]) -> Never {
+	let data = try! JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys])
+	FileHandle.standardOutput.write(data)
+	FileHandle.standardOutput.write("\n".data(using: .utf8)!)
+	exit(0)
+}
+
+func seInput() -> [String: Any] {
+	let raw = FileHandle.standardInput.readDataToEndOfFile()
+	guard let obj = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] else { seFail("bad JSON on stdin") }
+	return obj
+}
+
+func seBlob(_ input: [String: Any]) -> Data {
+	guard let s = input["blob"] as? String, let d = Data(base64Encoded: s) else { seFail("missing blob") }
+	return d
+}
+
+func seMint() -> SecureEnclave.P256.KeyAgreement.PrivateKey {
+	guard SecureEnclave.isAvailable else { seFail("secure enclave unavailable") }
+	var cfErr: Unmanaged<CFError>?
+	guard let access = SecAccessControlCreateWithFlags(
+		nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, [.privateKeyUsage, .userPresence], &cfErr
+	) else { seFail("access control: \(String(describing: cfErr))") }
+	do { return try SecureEnclave.P256.KeyAgreement.PrivateKey(accessControl: access) }
+	catch { seFail("create: \(error)") }
+}
+
+/// Usable on THIS Mac without any UI: loading succeeds and a key operation asks for interaction.
+func seUsable(_ blob: Data) -> Bool {
+	let ctx = LAContext()
+	ctx.interactionNotAllowed = true
+	guard let key = try? SecureEnclave.P256.KeyAgreement.PrivateKey(dataRepresentation: blob, authenticationContext: ctx) else {
+		return false
+	}
+	do {
+		_ = try key.sharedSecretFromKeyAgreement(with: P256.KeyAgreement.PrivateKey().publicKey)
+		return true
+	} catch {
+		let ns = error as NSError
+		return ns.domain == LAErrorDomain && ns.code == LAError.notInteractive.rawValue
+	}
+}
+
+if let seMode = CommandLine.arguments.first(where: { $0.hasPrefix("--se-") }) {
+	switch seMode {
+	case "--se-create":
+		let key = seMint()
+		seEmit(["blob": key.dataRepresentation.base64EncodedString(), "pub": key.publicKey.x963Representation.base64EncodedString()])
+	case "--se-ecdh":
+		let input = seInput()
+		guard let peerB64 = input["peer"] as? String, let peerRaw = Data(base64Encoded: peerB64) else { seFail("missing peer") }
+		let ctx = LAContext()
+		ctx.localizedReason = (input["reason"] as? String) ?? "unlock your jtk vault"
+		do {
+			let key = try SecureEnclave.P256.KeyAgreement.PrivateKey(dataRepresentation: seBlob(input), authenticationContext: ctx)
+			let peer = try P256.KeyAgreement.PublicKey(x963Representation: peerRaw)
+			let secret = try key.sharedSecretFromKeyAgreement(with: peer)
+			seEmit(["shared": secret.withUnsafeBytes { Data($0) }.base64EncodedString()])
+		} catch { seFail("ecdh: \(error)") }
+	case "--se-probe":
+		seEmit(["usable": seUsable(seBlob(seInput()))])
+	case "--se-selftest":
+		let key = seMint()
+		if seUsable(key.dataRepresentation) { seEmit(["se": "ok"]) }
+		seFail("selftest: freshly minted key not usable")
+	default:
+		seFail("unknown mode \(seMode)")
+	}
+}
 // --request <path>: read the AskRequest
 var request = AskRequest(
 	principal: "unknown", session: "unknown", at: "",
