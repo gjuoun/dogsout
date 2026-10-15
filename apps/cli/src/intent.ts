@@ -51,6 +51,7 @@ export const featureMap: FeatureMap = {
 			gotchas: [
 				"master shorter than 8 chars is refused (legacy init-min8)",
 				"--force replaces config AND vault — tests must use temporary JTK_HOME only",
+				"JTK_VAULT_V2=1 (experimental): no password — mints a Secure Enclave key, seals a v2 envelope, unlocks once (Touch ID) before reporting success; only one factor until WebUI passkey enrollment (F3)",
 			],
 			legacyFlags: { force: "init-guard" },
 			legacyKeys: ["init-master", "init-min8"],
@@ -144,6 +145,17 @@ export const featureMap: FeatureMap = {
 			does: "inspect and revoke approvals — metadata only, never values",
 			legacyKeys: ["grants-meta", "session-model", "session-resume"],
 		},
+		vault: {
+			tier: "exp",
+			does: "vault v2 envelope: status (no unlock), migrate v1→v2, rekey, slot rm, restore a verified rolling backup",
+			gotchas: [
+				"experimental: migrate (and v2 init) require JTK_VAULT_V2=1; v2 becomes default only with the F3 daemon + WebUI",
+				"until the F3 daemon every v2 vault command asks Touch ID once; cron/agents cannot unlock a v2 vault yet",
+				"restore promotes the state BEFORE the last write (rolling-backup semantics) and parks the broken file as vault.enc.broken",
+				"rekey drops passkey slots (no PRF output on the CLI) — re-enroll them in the WebUI",
+				"migrate keeps vault.v1.enc (password-encrypted) until the user deletes it",
+			],
+		},
 	},
 	invariants: [
 		{
@@ -167,20 +179,39 @@ export const featureMap: FeatureMap = {
 			appliesTo: ["run", "grants", "policy"],
 		},
 		{
+			id: "v2-at-least-one-slot",
+			statement: "a v2 vault always keeps at least one unlock slot; removing the last slot is refused",
+			appliesTo: ["vault"],
+		},
+		{
+			id: "backup-verified-before-rotate",
+			statement: "a write is read back before it replaces vault.enc; a failed write never rotates or replaces anything",
+			appliesTo: ["set", "rm", "import-env", "vault"],
+		},
+		{
+			id: "unlock-fail-closed",
+			statement: "no usable slot, cancelled Touch ID or a failing helper denies — never a fallback to a weaker factor",
+			appliesTo: ["get", "run", "set", "ls", "rm", "vault"],
+		},
+		{
 			id: "tests-use-temp-home",
 			statement: "tests and manual checks use a temporary JTK_HOME with fake credentials, never the real vault",
 		},
 	],
 	vault: {
-		shape: "{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — type-contracts/src/vault.ts",
+		shape:
+			"{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — type-contracts/src/vault.ts; on disk either v1 {kdf, iv_b64, ct_b64} or v2 {vault_id, fingerprint, data, slots[]}",
 		crypto: [
 			"argon2id m=64MiB t=2 p=1 (hash-wasm) derives the AES-256 key",
 			"AES-256-GCM over the whole vault JSON; fresh IV per save, salt fixed per vault",
 			"envelope {kdf, iv_b64, ct_b64}; 0600 atomic write (tempfile + rename)",
+			"v2 (JTK_VAULT_V2): random DEK seals the data (AAD jtk/data/v2|vault_id); se slot = ECDH(Secure Enclave, ephemeral) → HKDF jtk/se-kek/v1 → AES-GCM wrap of the DEK; fingerprint = HKDF(DEK, jtk/fingerprint/v1)[0:4]",
+			"every write: tmp → read-back check → .bak.1→.bak.2, vault.enc→.bak.1 → rename (2 rolling backups, v1 and v2)",
 		],
 		gotchas: [
 			"wrong master and tampering are indistinguishable (GCM auth failure) — by design",
 			"every write re-encrypts the whole vault",
+			"v2 slot metadata (kind, id, created_at, public keys) is plaintext so status never unlocks",
 		],
 	},
 	components: [
@@ -196,6 +227,18 @@ export const featureMap: FeatureMap = {
 			path: "src/session/",
 			tier: "exp",
 			note: "grants.json / sessions.json, 0600 atomic, metadata only",
+		},
+		{
+			name: "vault v2 envelope",
+			path: "src/vault/envelope.ts",
+			tier: "exp",
+			note: "pure DEK/slot crypto; the Secure Enclave is injected as an ECDH function",
+		},
+		{
+			name: "secure enclave helper client",
+			path: "src/vault/se.ts",
+			tier: "exp",
+			note: "spawns jtk-approve --se-* per call (JTK_SE_HELPER override; test fake in src/vault/helper/fake-se.ts)",
 		},
 		{
 			name: "api skeleton",
