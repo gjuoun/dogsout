@@ -90,10 +90,11 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 	if (names.length > 0) {
 		const ctxR = ctxFromEnv();
 		if (ctxR.isErr()) return err(ctxR.error);
-		const { home, master } = ctxR.value;
+		const ctx = ctxR.value;
+		const home = ctx.home;
 		const cfg = await loadConfig(home);
 		if (cfg.isErr()) return err(cfg.error);
-		const opened = await openDataOnce({ home, master });
+		const opened = await openDataOnce(ctx);
 		if (opened.isErr()) return err(opened.error);
 
 		const principal = a.principal ?? principalFromEnv();
