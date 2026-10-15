@@ -1,7 +1,7 @@
 import type { AskRequest, Config, Decision, SessionManifest, TtlTier, VaultData } from "@jtk/contracts";
 import { err, ok, type Result } from "neverthrow";
 import { digSubpath, parseAddress } from "../cli/address.ts";
-import { resolveToAddress } from "../cli/map.ts";
+import { resolveToAddress } from "../cli/resolve.ts";
 import { evaluate, type Verdict } from "../policy/evaluate.ts";
 import { consumeGrant, endSessionGrants, loadGrants, recordApproval } from "../session/grants.ts";
 import { closeSession, loadSessions, openSession, recordApprovals, takeReplay } from "../session/session.ts";
