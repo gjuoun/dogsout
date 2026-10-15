@@ -1,5 +1,5 @@
-// mockups/jtk-approve.swift — jtk-approve 审批窗 MOCKUP（GitHub issue #3 / JW-164，2026-10-09 二次修订）
-// 假数据、无 vault / policy / ask channel；编译：swiftc -O -o jtk-approve mockups/jtk-approve.swift
+// apps/ask/mockups/jtk-approve.swift — jtk-approve 审批窗 MOCKUP（GitHub issue #3 / JW-164，2026-10-09 二次修订）
+// 假数据、无 vault / policy / ask channel；编译：swiftc -O -o jtk-approve apps/ask/mockups/jtk-approve.swift
 // 模拟的 helper 契约：jtk 写请求 JSON → 拉起本 helper → 弹窗 → decision JSON 走 stdout → 退出。
 // 窗口分区：决策区（新请求：三态开关 + 六档 TTL + Touch ID 批准）与只读已授权段（session grant + policy 放行，不参与决策）。
 // --selftest：无头确定性 decision JSON（只含决策区），不建窗口、不触 Touch ID。
