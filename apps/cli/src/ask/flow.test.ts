@@ -3,17 +3,46 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { err, ok } from "neverthrow";
-import { type Io, runAlias, runInit, runSet } from "../cli/cmd-crud.ts";
-import { loadConfig, writeConfig } from "../cli/store.ts";
+import { parseAddress } from "../cli/address.ts";
+import { initFiles, loadConfig, nowIso, openData, saveData, writeConfig } from "../cli/store.ts";
 import { loadGrants } from "../session/grants.ts";
 import type { Channel } from "./channel.ts";
 import { prepareRun } from "./flow.ts";
 import { HELPER_ENV, swiftuiChannel } from "./swiftui.ts";
 
 const MASTER = "ask-flow-master";
-const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
+const ADDRESS = "jtk://dev/zai/api_key";
+const ALIAS = "ZAI_API_KEY";
 let home = "";
 let fakeHelper = "";
+
+/** Seed a field the way `jtk set` does, minus the CLI layer (store primitives only). */
+async function seedValue(value: string): Promise<void> {
+	const parsed = parseAddress(ADDRESS);
+	if (parsed.isErr()) throw new Error(parsed.error);
+	const ctx = { home, master: MASTER };
+	const opened = await openData(ctx);
+	if (opened.isErr()) throw new Error(opened.error);
+	const { envelope, data } = opened.value;
+	const { vault, item, field } = parsed.value;
+	data.vaults[vault] ??= {};
+	const items = data.vaults[vault];
+	if (!items[item]) items[item] = { fields: {}, updated_at: nowIso() };
+	items[item].fields[field] = value;
+	items[item].updated_at = nowIso();
+	const saved = await saveData(ctx, envelope, data);
+	if (saved.isErr()) throw new Error(saved.error);
+}
+
+/** Register an alias the way `jtk alias` does, and drop the default rules for this home. */
+async function seedAlias(): Promise<void> {
+	const cfg = await loadConfig(home);
+	if (cfg.isErr()) throw new Error(cfg.error);
+	cfg.value.aliases[ALIAS] = ADDRESS;
+	cfg.value.rules = [];
+	const w = await writeConfig(home, cfg.value);
+	if (w.isErr()) throw new Error(w.error);
+}
 
 const approveAll: Channel = {
 	name: "fake",
@@ -51,14 +80,10 @@ beforeAll(async () => {
 	home = mkdtempSync(join(tmpdir(), "jtk-ask-"));
 	process.env.JTK_HOME = home;
 	process.env.JTK_MASTER = MASTER;
-	await runInit([], stdinOf(""));
-	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-ask-me"));
-	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
-	const cfg = await loadConfig(home);
-	if (cfg.isErr()) throw new Error(cfg.error);
-	cfg.value.rules = [];
-	const w = await writeConfig(home, cfg.value);
-	if (w.isErr()) throw new Error(w.error);
+	const init = await initFiles(home, MASTER);
+	if (init.isErr()) throw new Error(init.error);
+	await seedValue("sk-ask-me");
+	await seedAlias();
 
 	fakeHelper = join(home, "fake-approve.ts");
 	await Bun.write(fakeHelper, await Bun.file(join(import.meta.dir, "helper", "fake-approve.ts")).text());
@@ -75,10 +100,7 @@ afterAll(() => {
 });
 
 async function open() {
-	const { openDataOnce, ctxFromEnv } = await import("../cli/cmd-crud.ts");
-	const ctx = ctxFromEnv();
-	if (ctx.isErr()) throw new Error(ctx.error);
-	const opened = await openDataOnce(ctx.value);
+	const opened = await openData({ home, master: MASTER });
 	if (opened.isErr()) throw new Error(opened.error);
 	return opened.value.data;
 }
@@ -97,17 +119,17 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [approveAll],
 			askBudgetMs: 5000,
 		});
 		expect(first.isOk()).toBe(true);
 		if (first.isOk()) {
-			expect(first.value.inject.ZAI_API_KEY).toBe("sk-ask-me");
-			expect(first.value.asked).toEqual(["ZAI_API_KEY"]);
+			expect(first.value.inject[ALIAS]).toBe("sk-ask-me");
+			expect(first.value.asked).toEqual([ALIAS]);
 		}
 		const grants = await loadGrants(home);
-		expect(grants.isOk() && grants.value.grants.some((g) => g.alias === "ZAI_API_KEY")).toBe(true);
+		expect(grants.isOk() && grants.value.grants.some((g) => g.alias === ALIAS)).toBe(true);
 
 		const second = await prepareRun({
 			home,
@@ -115,7 +137,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [broken], // would fail loudly if asked again
 			askBudgetMs: 5000,
 		});
@@ -130,7 +152,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester-deny@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [denyAll],
 			askBudgetMs: 5000,
 		});
@@ -145,7 +167,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester-broken@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [broken],
 			askBudgetMs: 100,
 		});
@@ -154,19 +176,19 @@ describe("ask flow (policy -> channel -> grant)", () => {
 	});
 
 	test("value rotation invalidates the grant and re-asks", async () => {
-		await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-rotated"));
+		await seedValue("sk-rotated");
 		const r = await prepareRun({
 			home,
 			cfg: await cfg(),
 			data: await open(),
 			principal: "tester@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [approveAll],
 			askBudgetMs: 5000,
 		});
 		expect(r.isOk()).toBe(true);
-		if (r.isOk()) expect(r.value.inject.ZAI_API_KEY).toBe("sk-rotated");
+		if (r.isOk()) expect(r.value.inject[ALIAS]).toBe("sk-rotated");
 	});
 
 	test("swiftui channel end-to-end with the fake helper binary", async () => {
@@ -177,7 +199,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [swiftuiChannel],
 			askBudgetMs: 10_000,
 		});
@@ -194,7 +216,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			data: await open(),
 			principal: "tester-crash@unit",
 			groups: [],
-			names: ["ZAI_API_KEY"],
+			names: [ALIAS],
 			channels: [swiftuiChannel],
 			askBudgetMs: 10_000,
 		});
