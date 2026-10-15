@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { VaultData, VaultFileV2 } from "@jtk/type-contracts";
 import { vaultPath } from "./paths.ts";
-import { initFiles, openData, saveData } from "./store.ts";
+import { initFiles, openData, saveData, V1_UNSUPPORTED } from "./store.ts";
 import { createEnvelopeV2 } from "./vault/envelope.ts";
 import { SE_HELPER_ENV, seCreate } from "./vault/se.ts";
 import { listVaultBackups, writeVaultFile } from "./vault/vault.ts";
@@ -38,9 +38,8 @@ describe("store: version-dispatching open/save", () => {
 			const opened = await openData({ home });
 			expect(opened.isOk()).toBe(true);
 			const { envelope, data: d } = opened._unsafeUnwrap();
-			expect(envelope.version).toBe(2);
 			expect(d.vaults.dev?.gh?.fields.token).toBe("FAKE-ghp");
-			if (envelope.version === 2) expect(envelope.file.fingerprint).toBe(file.fingerprint);
+			expect(envelope.file.fingerprint).toBe(file.fingerprint);
 		} finally {
 			rmSync(home, { recursive: true, force: true });
 		}
@@ -89,15 +88,40 @@ describe("store: version-dispatching open/save", () => {
 		}
 	});
 
-	test("v1 still needs the master and keeps its error text", async () => {
+	test("initFiles creates config + a v2 vault that opens through the se slot", async () => {
+		const home = mkdtempSync(join(tmpdir(), "jtk-store-init-"));
+		try {
+			const r = await initFiles(home);
+			expect(r._unsafeUnwrap().fingerprint).toMatch(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
+			const opened = (await openData({ home }))._unsafeUnwrap();
+			expect(opened.envelope.file.fingerprint).toBe(r._unsafeUnwrap().fingerprint);
+		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	test("a v1 (password) vault file is refused — cold cut, no reader", async () => {
 		const home = mkdtempSync(join(tmpdir(), "jtk-store-v1-"));
 		try {
-			expect((await initFiles(home, "store-test-master")).isOk()).toBe(true);
-			expect((await openData({ home }))._unsafeUnwrapErr()).toContain("JTK_MASTER not set");
-			expect((await openData({ home, master: "wrong-master-xx" }))._unsafeUnwrapErr()).toBe("wrong master password");
-			const ok1 = await openData({ home, master: "store-test-master" });
-			expect(ok1._unsafeUnwrap().envelope.version).toBe(1);
+			writeFileSync(
+				vaultPath(home),
+				JSON.stringify({ version: 1, kdf: { algo: "legacy-password" }, iv_b64: "x", ct_b64: "y" }),
+			);
+			expect((await openData({ home }))._unsafeUnwrapErr()).toBe(V1_UNSUPPORTED);
 		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	test("init aborts and cleans up when the new slot cannot be unlocked", async () => {
+		const home = mkdtempSync(join(tmpdir(), "jtk-store-init-deny-"));
+		process.env.FAKE_SE_MODE = "deny";
+		try {
+			const r = await initFiles(home);
+			expect(r._unsafeUnwrapErr()).toContain("init aborted");
+			expect(await Bun.file(vaultPath(home)).exists()).toBe(false);
+		} finally {
+			delete process.env.FAKE_SE_MODE;
 			rmSync(home, { recursive: true, force: true });
 		}
 	});

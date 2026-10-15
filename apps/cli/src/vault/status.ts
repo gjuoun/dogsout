@@ -1,4 +1,4 @@
-import { jtkHome, listVaultBackups, readVaultRaw, seProbe, vaultPath } from "@jtk/core";
+import { jtkHome, listVaultBackups, readVaultRaw, seProbe, V1_UNSUPPORTED, vaultPath } from "@jtk/core";
 import { parseVaultFileV2, vaultFileVersion } from "@jtk/type-contracts";
 import { command } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
@@ -15,11 +15,7 @@ async function statusCore(): Promise<Result<string, string>> {
 		return err(`vault not found: ${vaultPath(home)} — run: jtk init`);
 	}
 	const version = vaultFileVersion(raw.value);
-	if (version === 1) {
-		return ok(
-			`vault v1 · master password (Argon2id)\n${backupLine}\nexperimental v2: JTK_VAULT_V2=1 jtk vault migrate`,
-		);
-	}
+	if (version === 1) return err(V1_UNSUPPORTED);
 	const parsed = version === 2 ? parseVaultFileV2(raw.value) : null;
 	if (!parsed?.ok) return err(`vault.enc unreadable\n${backupLine}`);
 	const file = parsed.file;

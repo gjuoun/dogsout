@@ -26,7 +26,7 @@ export function aliasCommand() {
 				return ok(`${name} -> ${addr}`);
 			},
 		}),
-		{ reads: [], writes: ["config"], env: ["JTK_HOME", "JTK_MASTER"] },
+		{ reads: [], writes: ["config"], env: ["JTK_HOME"] },
 	);
 }
 
