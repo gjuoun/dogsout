@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { runSafely, subcommands } from "cmd-ts";
 import { parseErrorMessage, unwrapRunnerOutput } from "./cmd.ts";
 import { COMMANDS } from "./commands.ts";

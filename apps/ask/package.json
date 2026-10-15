@@ -1,0 +1,10 @@
+{
+	"name": "@jtk/approval-ui",
+	"version": "0.0.1",
+	"private": true,
+	"license": "Apache-2.0",
+	"description": "junethekey native approval window (macOS, SwiftUI)",
+	"scripts": {
+		"build": "bash build.sh"
+	}
+}

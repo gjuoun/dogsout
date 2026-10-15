@@ -6,63 +6,113 @@
 
 > **Status: F1 + F2 shipped** — the local monolith CLI below works today, plus the policy engine: allow/ask/deny rules, TTL grants, session manifests with one-shot resume, and single-person local approval (SwiftUI helper + CLI fallback, fail-closed). Daemon, phone approval, relay, and tokens are future increments. Per-command intent, tiers and invariants live in [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts).
 
-## Quick start (F1 monolith)
+## Install (dev)
+
+`jtk` is a Bun app; there is no npm release yet. From a clone:
 
 ```bash
 git clone https://github.com/gjuoun/junethekey && cd junethekey
 bun install
+cd apps/cli && bun link    # puts jtk on PATH (~/.bun/bin/jtk)
+```
 
+Requires [Bun](https://bun.sh) on PATH. Uninstall with `cd apps/cli && bun unlink`.
+
+## Usage guide
+
+### Setup
+
+```bash
 # JTK_HOME selects storage (default ~/.config/junethekey); vault operations use JTK_MASTER
 # export/help do not decrypt or require the master
 export JTK_MASTER="a-long-master-passphrase"
 
-bun apps/cli/src/cli/main.ts init                       # create vault.enc (AES-256-GCM, argon2id) + config.json
-echo "sk-..." | bun apps/cli/src/cli/main.ts set jtk://dev/zai/api_key --stdin
-bun apps/cli/src/cli/main.ts get jtk://dev/zai/api_key                 # masked digest (sha256:…)
-bun apps/cli/src/cli/main.ts get jtk://dev/zai/api_key --reveal        # actual value
-bun apps/cli/src/cli/main.ts alias ZAI_API_KEY jtk://dev/zai/api_key   # register an alias
+jtk init   # create vault.enc (AES-256-GCM, argon2id) + config.json
+```
 
+### Vault basics
+
+Values live at `jtk://vault/item/field` addresses; a dotted path digs into JSON field values.
+
+```bash
+echo "sk-..." | jtk set jtk://dev/zai/api_key   # value via stdin, never as a CLI argument
+jtk get jtk://dev/zai/api_key                    # masked digest (sha256:…, length)
+jtk get jtk://dev/zai/api_key --reveal           # actual value — explicit plaintext only
+jtk ls                                           # list field addresses, no values
+jtk rm jtk://dev/zai/api_key                     # remove one field
+
+jtk alias ZAI_API_KEY jtk://dev/zai/api_key      # env-friendly name -> one address
+jtk get ZAI_API_KEY                              # aliases read like addresses
+```
+
+Rotation is alias-native: `set` the same address again and every alias/run follows — no copies to drift.
+
+### Inject into child processes
+
+```bash
 # inject secrets into child env without a plaintext cache; the child can still persist values
-bun apps/cli/src/cli/main.ts run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
+jtk run --env ZAI_API_KEY -- sh -c 'curl -s -H "Authorization: Bearer $ZAI_API_KEY" …'
 
 # whole .env files (--from-env: literals pass through, jtk:// refs resolve; item spread --from-item was removed)
 printf 'ZAI=jtk://dev/zai/api_key\nREGION=us-east-1\n' > app.env   # refs only — committable
-bun apps/cli/src/cli/main.ts run --from-env app.env -- ./deploy.sh
-
-# migrate a simple KEY=value file (values in; jtk:// becomes aliases; op:// skips appear in the summary)
-printf 'DEEPSEEK_API_KEY=sk-x\nZAI=jtk://dev/zai/api_key\n' > keys.env
-bun apps/cli/src/cli/main.ts import-env keys.env --vault dev --item misc
-bun apps/cli/src/cli/main.ts export --format env-ref                  # refs only, safe to commit
+jtk run --from-env app.env -- ./deploy.sh
 ```
 
-## F2: policy, approval, sessions
+`run` strips the inherited `JTK_MASTER` from the child environment; exit code is the child's.
+
+### .env migration round-trip
 
 ```bash
-# rules: last-match-wins, no match -> default_decision (ask). deny beats every grant.
-bun apps/cli/src/cli/main.ts policy config rule add '{"id":"cron-allow","principal":"cron-*","resource":"*_API_KEY","decide":"allow"}'
-bun apps/cli/src/cli/main.ts policy config rule add '{"id":"zai-ask","principal":"*","resource":"ZAI_*","decide":"ask","ask_on":["first-use","value-changed"]}'
-bun apps/cli/src/cli/main.ts policy simulate --principal 'nightly@host' --alias ZAI_API_KEY   # preview, no grant
-bun apps/cli/src/cli/main.ts policy why --alias ZAI_API_KEY                                  # verdict + grant state
-
-# approval: with no allow rule, run asks — SwiftUI window (jtk-approve helper) or CLI prompt.
-# timeout / closed window / no channel = deny, always. Approvals become metadata-only grants
-# (agent/alias/value_hash/expiry) in grants.json; rotate the value and the grant dies.
-bun apps/cli/src/cli/main.ts run --env ZAI_API_KEY -- ./script.sh
-bun apps/cli/src/cli/main.ts grants ls                          # what is live, and for how long
-bun apps/cli/src/cli/main.ts grants rm ZAI_API_KEY              # revoke -> next run asks again
-
-# sessions: one manifest invites keys in one approval window; grants die when the run ends;
-# an interrupted run resumes once (--resume replays the last approval list, permissions not values)
-printf '{"id":"sess_1","principal":"agent@laptop","groups":[],"invites":["ZAI_API_KEY"]}' > session.json
-bun apps/cli/src/cli/main.ts run --session session.json --env ZAI_API_KEY -- ./long-job.sh
-bun apps/cli/src/cli/main.ts run --session session.json --resume --env ZAI_API_KEY -- ./long-job.sh
-
-# map slots: chain references resolved fresh on every read — rotate the upstream, slots follow
-bun apps/cli/src/cli/main.ts map llm ZAI_API_KEY
-bun apps/cli/src/cli/main.ts get llm
+# migrate a simple KEY=value file (values in; jtk:// becomes aliases; op:// skips appear in the summary)
+printf 'DEEPSEEK_API_KEY=sk-x\nZAI=jtk://dev/zai/api_key\n' > keys.env
+jtk import-env keys.env --vault dev --item misc
+jtk export --format env-ref    # refs only, safe to commit
 ```
 
-The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/cli/src/ask/helper/jtk-approve.swift`, build with `scripts/build-helper.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
+### Policy: allow / ask / deny
+
+Rules are last-match-wins; no match falls to `default_decision` (ask). `deny` beats every grant.
+
+```bash
+jtk policy config rule add '{"id":"cron-allow","principal":"cron-*","resource":"*_API_KEY","decide":"allow"}'
+jtk policy config rule add '{"id":"zai-ask","principal":"*","resource":"ZAI_*","decide":"ask","ask_on":["first-use","value-changed"]}'
+jtk policy config principal add '{"name":"nightly@host"}'   # names today; keys come with the daemon
+jtk policy config show                                     # current config json
+
+jtk policy simulate --principal 'nightly@host' --alias ZAI_API_KEY   # preview a verdict, no grant
+jtk policy why --alias ZAI_API_KEY                                    # verdict + grant state
+```
+
+### Approval and grants
+
+With no allow rule, `run` asks: a SwiftUI window (the `jtk-approve` helper) or a CLI prompt. Timeout, a closed window, or no available channel is a deny — always. Approvals become metadata-only grants (agent / alias / value_hash / expiry) in `grants.json`; rotate the value and the grant dies.
+
+```bash
+jtk run --env ZAI_API_KEY -- ./script.sh
+jtk grants ls                      # what is live, and for how long
+jtk grants rm ZAI_API_KEY          # revoke -> next run asks again
+```
+
+The approval window is the validated [SwiftUI mockup](mockups/jtk-approve.swift) turned into a real helper (`apps/ask/helper/jtk-approve.swift`, build with `apps/ask/build.sh`); CI tests the contract with a fake helper and leaves the Touch ID window smoke as manual macOS evidence.
+
+### Sessions
+
+One manifest invites keys in one approval window; grants die when the run ends. An interrupted run resumes once — `--resume` replays the last approval list (permissions, not values).
+
+```bash
+printf '{"id":"sess_1","principal":"agent@laptop","groups":[],"invites":["ZAI_API_KEY"]}' > session.json
+jtk run --session session.json --env ZAI_API_KEY -- ./long-job.sh
+jtk run --session session.json --resume --env ZAI_API_KEY -- ./long-job.sh
+```
+
+### Map slots (experimental)
+
+```bash
+jtk map llm ZAI_API_KEY    # slot -> address or another slot (chained refs, cycle-guarded)
+jtk get llm                # resolved fresh on every read — rotate upstream, slots follow
+```
+
+`map` overlaps with `alias`; the planned merge into a single chained-alias model is tracked as roadmap cleanup.
 
 ## Current security boundary
 
@@ -113,7 +163,7 @@ Milestones are groups, not a dependency order. Shipped means locally available, 
 
 ## Contributing
 
-Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update `(apps/cli/src/intent.ts)` in the same diff.
+Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts) in the same diff.
 
 ## License
 

@@ -172,7 +172,7 @@ export const featureMap: FeatureMap = {
 		},
 	],
 	vault: {
-		shape: "{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — contracts/vault.ts",
+		shape: "{version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}} — type-contracts/src/vault.ts",
 		crypto: [
 			"argon2id m=64MiB t=2 p=1 (hash-wasm) derives the AES-256 key",
 			"AES-256-GCM over the whole vault JSON; fresh IV per save, salt fixed per vault",

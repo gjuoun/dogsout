@@ -1,0 +1,23 @@
+{
+	"name": "@jtk/api",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"description": "junethekey Hono/OpenAPI server — the F3 daemon seed",
+	"exports": {
+		".": "./src/server.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@hono/zod-openapi": "1.6.3",
+		"@jtk/type-contracts": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5.9.0"
+	}
+}

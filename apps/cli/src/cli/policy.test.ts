@@ -2,8 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sha256Hex } from "../ask/flow.ts";
-import { recordApproval } from "../session/grants.ts";
+import { recordApproval, sha256Hex } from "@jtk/core";
 import { type Io, runAlias, runInit, runSet } from "./cmd-crud.ts";
 import { runGrants, runPolicy } from "./cmd-policy.ts";
 
