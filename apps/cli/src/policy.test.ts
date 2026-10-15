@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { recordApproval, sha256Hex } from "@jtk/core";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
-import { runGrants, runPolicy } from "./cmd-policy.ts";
+import { runGrants } from "./grants/grants.ts";
 import { runInit } from "./init.ts";
+import { runPolicy } from "./policy/policy.ts";
 import { runSet } from "./set.ts";
 
 const MASTER = "policy-test-master";
