@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Build + ad-hoc sign the SwiftUI approval helper (macOS only; CI never runs this).
-set -euo pipefail
-cd "$(dirname "$0")/.."
-out="${1:-$HOME/.bun/bin/jtk-approve}"
-mkdir -p "$(dirname "$out")"
-swiftc -O -o "$out" apps/cli/src/ask/helper/jtk-approve.swift
-codesign --force --sign - "$out" 2>/dev/null || true
-echo "built $out"
-echo "selftest:"
-"$out" --selftest
+# Shim: the approval-window build moved in with its app (apps/ask/build.sh).
+# Kept so existing callers and the runbook Helpers section keep working.
+exec bash "$(cd "$(dirname "$0")/.." && pwd)/apps/ask/build.sh" "$@"
