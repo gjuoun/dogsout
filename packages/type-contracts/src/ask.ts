@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * AskChannel contract (PRD §3) — the single JSON shape every approval channel
- * consumes and emits. Formalized from the validated mockup (mockups/jtk-approve.swift,
+ * consumes and emits. Formalized from the validated mockup (apps/ask/mockups/jtk-approve.swift,
  * PR #4); the helper's --selftest literals are the reference fixtures.
  *
  * This is the WIRE half of the approval protocol: these schemas are what crosses a
