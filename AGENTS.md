@@ -33,7 +33,7 @@ bun run test:e2e
 
 - Bun/strict TypeScript; relative imports include .ts; zod runtime contracts stay in packages/type-contracts/. Errors use neverthrow Results; plain data crosses boundaries.
 - Tests and manual checks use temporary JTK_HOME and fake credentials, never the real vault. No secret values in logs, notifications or default exports.
-- F1 has no broker authorization. run strips the inherited master but explicit reinjection has a documented gap; do not claim it fixed without evidence.
+- F1 has no broker authorization. The vault unlocks with Touch ID through the Secure Enclave helper — there is no master password; until F3 every vault command asks Touch ID once and headless callers cannot unlock. Do not claim otherwise without evidence; tests use the fake helper (`JTK_SE_HELPER`).
 - Relay/hosted delivery sees approval metadata only. Sync/backup and new value/network boundaries require their own approved design.
 - A linked test is not full coverage. Keep partial/manual verification and its gaps explicit; do not manufacture evidence to mark a feature shipped.
 

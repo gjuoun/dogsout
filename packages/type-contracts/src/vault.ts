@@ -29,7 +29,7 @@ export function parseVaultData(raw: unknown): { ok: true; data: VaultData } | { 
 /**
  * vault.enc v2 envelope (2026-10-14 design, whiteboard 939bdf97): a random DEK encrypts the data once;
  * each unlock factor is a slot holding a copy of the DEK wrapped by that factor's KEK. No password,
- * no Argon2id — v1 files (`{version:1, kdf, iv_b64, ct_b64}`) are only read by `jtk vault migrate`.
+ * no Argon2id — v1 password files (`{version:1, kdf, iv_b64, ct_b64}`) are refused since the 2026-10-14 cold cut.
  */
 const B64 = z.string().min(1);
 
