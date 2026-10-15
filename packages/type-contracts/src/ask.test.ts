@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AskRequestSchema, parseDecision, TtlTierSchema } from "./ask.ts";
 
-// Reference fixtures: the mockup --selftest decision literals (mockups/jtk-approve.swift).
+// Reference fixtures: the mockup --selftest decision literals (apps/ask/mockups/jtk-approve.swift).
 describe("decision contract (mockup selftest literals)", () => {
 	test("approve with per-key map parses", () => {
 		const raw = {
