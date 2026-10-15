@@ -24,6 +24,8 @@ bun test
 bun run test:e2e
 ```
 
+One command for the whole gate: `bash runbook/scripts/verify-all.sh` (last line `VERIFY-ALL: PASS`). How to launch, drive and collect evidence — temp `JTK_HOME`, the fake Secure Enclave and approval helpers, per-capability recipes — lives in [`runbook/`](runbook/index.md); update it in the same diff when a command's driving recipe changes.
+
 ## Workflow
 
 - Incremental commits, one logical change each; PR then merge. Do not push without the owner's go-ahead.

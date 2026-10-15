@@ -193,6 +193,8 @@ Milestones are groups, not a dependency order. Shipped means locally available, 
 
 ## Contributing
 
+How to launch, drive and verify a checkout (and the one-command gate) is in [`runbook/`](runbook/index.md).
+
 Clear is better than clever. `bun run typecheck`, `bun run lint`, `bun test` and `bun run test:e2e` must pass — CI runs `bun run test` (turbo, per package) *and* `bun test` (whole tree) on purpose, so a suite reachable from only one of them shows up as a count mismatch. Start with [AGENTS.md](AGENTS.md); when a command's behavior changes, update [`apps/cli/src/intent.ts`](apps/cli/src/intent.ts) in the same diff.
 
 ## License
