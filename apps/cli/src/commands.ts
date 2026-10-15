@@ -1,4 +1,4 @@
-import { aliasCommand, getCommand, initCommand, lsCommand, rmCommand, setCommand } from "./cmd-crud.ts";
+import { aliasCommand } from "./alias.ts";
 import { exportCommand, importEnvCommand } from "./cmd-io.ts";
 import {
 	configSetCommand,
@@ -16,7 +16,12 @@ import {
 	whyCommand,
 } from "./cmd-policy.ts";
 import { runCommand } from "./cmd-run.ts";
+import { getCommand } from "./get.ts";
+import { initCommand } from "./init.ts";
+import { lsCommand } from "./ls.ts";
 import { mapCommand } from "./map.ts";
+import { rmCommand } from "./rm.ts";
+import { setCommand } from "./set.ts";
 
 /** The importable command table: notebook feature map ctx/check consumes this. */
 export const COMMANDS = {

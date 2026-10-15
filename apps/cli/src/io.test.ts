@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { jtkHome, loadConfig } from "@jtk/core";
 import type { Io } from "./cmd.ts";
-import { runInit } from "./cmd-crud.ts";
 import { runExport, runImportEnv } from "./cmd-io.ts";
+import { runInit } from "./init.ts";
 
 const MASTER = "io-test-master";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
