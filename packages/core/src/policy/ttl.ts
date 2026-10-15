@@ -1,4 +1,4 @@
-import type { TtlTier } from "@jtk/contracts";
+import type { TtlTier } from "@jtk/type-contracts";
 
 export interface DecaySettings {
 	/** always-tier horizon, e.g. "720h" (30d). From config settings.always_decay. */

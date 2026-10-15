@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AskRequest } from "@jtk/contracts";
+import type { AskRequest } from "@jtk/type-contracts";
 import { err, ok } from "neverthrow";
 import { type Channel, runAskChain } from "./channel.ts";
 

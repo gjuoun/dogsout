@@ -1,4 +1,3 @@
-import type { VaultData } from "@jtk/contracts";
 import {
 	type Ctx,
 	configPath,
@@ -15,6 +14,7 @@ import {
 	saveData,
 	writeConfig,
 } from "@jtk/core";
+import type { VaultData } from "@jtk/type-contracts";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";

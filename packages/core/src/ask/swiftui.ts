@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AskRequest, Decision } from "@jtk/contracts";
+import type { AskRequest, Decision } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import { type Channel, decisionFromStdout } from "./channel.ts";
 

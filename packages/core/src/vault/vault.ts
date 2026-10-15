@@ -1,4 +1,4 @@
-import { parseVaultData, type VaultData } from "@jtk/contracts";
+import { parseVaultData, type VaultData } from "@jtk/type-contracts";
 import { argon2id } from "hash-wasm";
 import { err, ok, type Result } from "neverthrow";
 

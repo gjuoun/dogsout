@@ -29,7 +29,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["packages/contracts/gen/**"],
+			"includes": ["packages/type-contracts/gen/**"],
 			"linter": {
 				"enabled": false
 			}

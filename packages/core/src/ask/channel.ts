@@ -1,4 +1,4 @@
-import { type AskRequest, type Decision, parseDecision } from "@jtk/contracts";
+import { type AskRequest, type Decision, parseDecision } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /** One approval outlet in the degradation chain (webui -> swiftui -> cli -> deny). */

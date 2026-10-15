@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"@hono/zod-openapi": "1.6.3",
-		"@jtk/contracts": "workspace:*"
+		"@jtk/type-contracts": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

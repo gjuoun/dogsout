@@ -1,4 +1,4 @@
-import type { Config } from "@jtk/contracts";
+import type { Config } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 export const MAX_CHAIN_DEPTH = 8;
