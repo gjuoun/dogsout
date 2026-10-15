@@ -13,7 +13,7 @@
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@jtk/contracts": "workspace:*",
+		"@jtk/type-contracts": "workspace:*",
 		"hash-wasm": "^4.12.0",
 		"neverthrow": "^8.0.0"
 	},

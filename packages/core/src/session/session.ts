@@ -1,4 +1,4 @@
-import { parseSessionFile, type SessionFile, type SessionManifest } from "@jtk/contracts";
+import { parseSessionFile, type SessionFile, type SessionManifest } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import { sessionsPath } from "../paths.ts";
 

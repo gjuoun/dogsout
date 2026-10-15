@@ -66,7 +66,7 @@ final class Model: ObservableObject {
     var approvedCount: Int { request.keys.filter { choice[$0.alias] != .deny }.count }
     var selectedTTL: String { ttlOptions[ttlIndex] }
 
-    /// decision JSON 草案（仅供 F2 参考，不落 contracts/）：
+    /// decision JSON 草案（仅供 F2 参考，不落 type-contracts/）：
     /// {"decision":"approve","ttl":"10m","renew_existing":false,"keys":{"<alias>":"ttl"|"once"|"deny"}}
     /// 只含决策区 key；已授权段纯展示不进 JSON。renew_existing 与 "keep" 为 F3 预留；
     /// mockup 恒输出 false、永不产生 "keep"。选档「本次」时 ◉ 行落 once。

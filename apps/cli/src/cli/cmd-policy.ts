@@ -1,5 +1,3 @@
-import type { Config } from "@jtk/contracts";
-import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/contracts";
 import {
 	type Ctx,
 	evaluate,
@@ -14,6 +12,8 @@ import {
 	sha256Hex,
 	writeConfig,
 } from "@jtk/core";
+import type { Config } from "@jtk/type-contracts";
+import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/type-contracts";
 import { array, command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { GrantMeta } from "@jtk/contracts";
+import type { GrantMeta } from "@jtk/type-contracts";
 import { grantUsable } from "../policy/evaluate.ts";
 import { consumeGrant, endSessionGrants, loadGrants, recordApproval, revokeByAlias } from "./grants.ts";
 import { closeSession, openSession, recordApprovals, takeReplay } from "./session.ts";

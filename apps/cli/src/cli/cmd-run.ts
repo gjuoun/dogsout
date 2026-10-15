@@ -1,6 +1,4 @@
 import { hostname } from "node:os";
-import type { Config, VaultData } from "@jtk/contracts";
-import { SessionManifestSchema } from "@jtk/contracts";
 import {
 	cliChannel,
 	closeSessionFlow,
@@ -18,6 +16,8 @@ import {
 	sha256Hex,
 	swiftuiChannel,
 } from "@jtk/core";
+import type { Config, VaultData } from "@jtk/type-contracts";
+import { SessionManifestSchema } from "@jtk/type-contracts";
 import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runJtk, withMeta } from "./cmd.ts";

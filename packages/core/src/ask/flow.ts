@@ -1,4 +1,4 @@
-import type { AskRequest, Config, Decision, SessionManifest, TtlTier, VaultData } from "@jtk/contracts";
+import type { AskRequest, Config, Decision, SessionManifest, TtlTier, VaultData } from "@jtk/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import { digSubpath, parseAddress } from "../address.ts";
 import { evaluate, type Verdict } from "../policy/evaluate.ts";

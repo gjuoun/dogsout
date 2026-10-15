@@ -18,7 +18,7 @@
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@jtk/contracts": "workspace:*",
+		"@jtk/type-contracts": "workspace:*",
 		"@jtk/core": "workspace:*",
 		"cmd-ts": "0.15.0",
 		"neverthrow": "^8.0.0"

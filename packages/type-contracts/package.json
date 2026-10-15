@@ -1,5 +1,5 @@
 {
-	"name": "@jtk/contracts",
+	"name": "@jtk/type-contracts",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",

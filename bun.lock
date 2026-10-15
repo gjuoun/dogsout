@@ -16,7 +16,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@hono/zod-openapi": "1.6.3",
-        "@jtk/contracts": "workspace:*",
+        "@jtk/type-contracts": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -34,8 +34,8 @@
         "jtk": "./src/cli/main.ts",
       },
       "dependencies": {
-        "@jtk/contracts": "workspace:*",
         "@jtk/core": "workspace:*",
+        "@jtk/type-contracts": "workspace:*",
         "cmd-ts": "0.15.0",
         "neverthrow": "^8.0.0",
       },
@@ -44,24 +44,24 @@
         "typescript": "^5.9.0",
       },
     },
-    "packages/contracts": {
-      "name": "@jtk/contracts",
-      "version": "0.0.1",
-      "dependencies": {
-        "zod": "^4.0.0",
-      },
-    },
     "packages/core": {
       "name": "@jtk/core",
       "version": "0.0.1",
       "dependencies": {
-        "@jtk/contracts": "workspace:*",
+        "@jtk/type-contracts": "workspace:*",
         "hash-wasm": "^4.12.0",
         "neverthrow": "^8.0.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.9.0",
+      },
+    },
+    "packages/type-contracts": {
+      "name": "@jtk/type-contracts",
+      "version": "0.0.1",
+      "dependencies": {
+        "zod": "^4.0.0",
       },
     },
   },
@@ -94,9 +94,9 @@
 
     "@jtk/approval-ui": ["@jtk/approval-ui@workspace:apps/ask"],
 
-    "@jtk/contracts": ["@jtk/contracts@workspace:packages/contracts"],
-
     "@jtk/core": ["@jtk/core@workspace:packages/core"],
+
+    "@jtk/type-contracts": ["@jtk/type-contracts@workspace:packages/type-contracts"],
 
     "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.64.3", "", { "os": "linux", "cpu": "x64" }, "sha512-vMh+mt0cw1BHldd8cqaU6A5s1W4EUKl6+8MRsv86mj954L4xyruKD7qPXMUI2icImadAZARK10h0onaGTLmCVg=="],
 
