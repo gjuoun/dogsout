@@ -1,9 +1,18 @@
+import {
+	formatEnvRef,
+	formatJsonRef,
+	jtkHome,
+	loadConfig,
+	masterFromEnv,
+	nowIso,
+	openData,
+	parseEnvFile,
+	saveData,
+	writeConfig,
+} from "@jtk/core";
 import { command, option, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { formatEnvRef, formatJsonRef, parseEnvFile } from "../vault/io.ts";
 import { runJtk, withMeta } from "./cmd.ts";
-import { jtkHome } from "./paths.ts";
-import { loadConfig, masterFromEnv, nowIso, openData, saveData, writeConfig } from "./store.ts";
 
 export function importEnvCommand() {
 	return withMeta(

@@ -14,5 +14,9 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run lint
+      # Both runners on purpose: `bun run test` shards per package through turbo, which is
+      # what actually exercises each package's own `test` script; `bun test` walks the whole
+      # tree from the root. A suite reachable from only one of them shows up as a count mismatch.
+      - run: bun run test
       - run: bun test
       - run: bun run test:e2e

@@ -1,18 +1,23 @@
-import type { Config } from "@jtk/contracts";
-import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/contracts";
+import {
+	type Ctx,
+	evaluate,
+	jtkHome,
+	loadConfig,
+	loadGrants,
+	loadSessions,
+	parseAddress,
+	parseDuration,
+	resolveToAddress,
+	revokeByAlias,
+	sha256Hex,
+	writeConfig,
+} from "@jtk/core";
+import type { Config } from "@jtk/type-contracts";
+import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/type-contracts";
 import { array, command, multioption, option, optional, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { sha256Hex } from "../ask/flow.ts";
-import { evaluate } from "../policy/evaluate.ts";
-import { parseDuration } from "../policy/ttl.ts";
-import { loadGrants, revokeByAlias } from "../session/grants.ts";
-import { loadSessions } from "../session/session.ts";
-import { parseAddress } from "./address.ts";
 import { runJtk, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./cmd-crud.ts";
-import { resolveToAddress } from "./map.ts";
-import { jtkHome } from "./paths.ts";
-import { type Ctx, loadConfig, writeConfig } from "./store.ts";
 
 async function ctxAndConfig(): Promise<Result<{ ctx: Ctx; cfg: Config }, string>> {
 	const ctx = ctxFromEnv();

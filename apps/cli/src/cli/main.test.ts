@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configPath, vaultPath } from "@jtk/core";
 import { type Io, runAlias, runGet, runInit, runLs, runRm, runSet } from "./cmd-crud.ts";
-import { configPath, vaultPath } from "./paths.ts";
 
 const MASTER = "test-master-pass";
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });

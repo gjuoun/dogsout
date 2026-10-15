@@ -4,6 +4,10 @@
 		"typecheck": {
 			"outputs": []
 		},
+		"build": {
+			"cache": false,
+			"outputs": []
+		},
 		"test": {
 			"cache": false,
 			"outputs": []
