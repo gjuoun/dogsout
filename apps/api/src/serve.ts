@@ -1,6 +1,6 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { BunWebSocketData, BunWebSocketHandler } from "hono/bun";
 import type { Server, WebSocketHandler } from "bun";
+import type { BunWebSocketData, BunWebSocketHandler } from "hono/bun";
 
 /** Keep the server plumbing tiny and testable: createServer() covers the routes. */
 export function serve(app: OpenAPIHono, port: number, websocket?: BunWebSocketHandler<BunWebSocketData>) {
