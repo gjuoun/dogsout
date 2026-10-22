@@ -114,5 +114,8 @@ if (import.meta.main) {
 	migrateApiDb(db);
 	const home = jtkHome();
 	watchHome(home);
-	serve(createServer({ db, home }), port);
+	// Same wiring drive:ui uses: without the hono/bun websocket handler the /events
+	// upgrade never reaches the route and the agent panel gets no frames.
+	const { websocket } = await import("hono/bun");
+	serve(createServer({ db, home }), port, websocket);
 }
