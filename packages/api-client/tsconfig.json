@@ -1,0 +1,10 @@
+{
+	"extends": "../../tsconfig.json",
+	// heyapi's vendored client runtime is not written for exactOptionalPropertyTypes;
+	// the generated files are compiled by this package and by every consumer (apps/web),
+	// so the flag is off here rather than proving something about code we do not own.
+	"compilerOptions": {
+		"exactOptionalPropertyTypes": false
+	},
+	"include": ["src"]
+}
