@@ -8,6 +8,7 @@ export * from "./address.ts";
 export * from "./ask/channel.ts";
 export * from "./ask/cli.ts";
 export * from "./ask/flow.ts";
+export * from "./ask/labels.ts";
 export * from "./ask/swiftui.ts";
 export * from "./paths.ts";
 export * from "./policy/evaluate.ts";
