@@ -14,10 +14,14 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "turbo run test",
-		"test:e2e": "bun tests/e2e.ts"
+		"test:e2e": "bun tests/e2e.ts",
+		"codegen": "bun scripts/codegen.ts",
+		"drive:ui": "bun tests/drive-ui.ts",
+		"check:bundle": "bun scripts/check-bundle.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.0.0",
+		"@hey-api/openapi-ts": "0.99.0",
 		"@types/bun": "latest",
 		"typescript": "^5.9.0",
 		"turbo": "^2.11.0"
