@@ -6,6 +6,7 @@ import { resolveToAddress } from "../resolve.ts";
 import { consumeGrant, endSessionGrants, loadGrants, recordApproval } from "../session/grants.ts";
 import { closeSession, loadSessions, openSession, recordApprovals, takeReplay } from "../session/session.ts";
 import { type Channel, runAskChain } from "./channel.ts";
+import { grantStatusLabel } from "./labels.ts";
 
 export async function sha256Hex(v: string): Promise<string> {
 	const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
@@ -39,18 +40,6 @@ function settingsOf(cfg: Config) {
 		defaultDecision: s?.default_decision ?? "ask",
 		alwaysDecay: s?.always_decay ?? "720h",
 	};
-}
-
-function remainingLabel(expiresAt: string | null, sessionBound: boolean, now: Date): string {
-	if (sessionBound) return "session";
-	if (expiresAt === null) return "no expiry";
-	const ms = new Date(expiresAt).getTime() - now.getTime();
-	if (ms <= 0) return "expired";
-	const mins = Math.round(ms / 60_000);
-	if (mins < 60) return "剩 " + mins + "m";
-	const hours = Math.round(mins / 60);
-	if (hours < 48) return "剩 " + hours + "h";
-	return "剩 " + Math.round(hours / 24) + "d";
 }
 
 export function readVaultValue(data: VaultData, address: string): Result<string, string> {
@@ -136,7 +125,7 @@ export async function prepareRun(input: AskFlowInput): Promise<Result<AskFlowOut
 	if (askKeys.length > 0) {
 		const grantedRows = grantsFile.value.grants
 			.filter((g) => g.principal === input.principal && grantAlive(g, activeSessions, now))
-			.map((g) => ({ alias: g.alias, status: remainingLabel(g.expires_at, g.session !== undefined, now) }));
+			.map((g) => ({ alias: g.alias, status: grantStatusLabel(g, now) }));
 
 		const request: AskRequest = {
 			principal: input.principal,

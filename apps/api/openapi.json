@@ -1,0 +1,777 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "junethekey",
+    "version": "0.1.0",
+    "description": "credential broker for agents — ask + approval surface (F3 preview)"
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "webui": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "milestone",
+          "webui"
+        ],
+        "description": "liveness + which milestone this server is"
+      },
+      "AuthStatus": {
+        "type": "object",
+        "properties": {
+          "credentials": {
+            "type": "integer"
+          },
+          "rpID": {
+            "type": "string"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "credentials",
+          "rpID",
+          "origins"
+        ],
+        "description": "is this browser allowed to approve, and against which RP"
+      },
+      "RegistrationOptionsWrap": {
+        "type": "object",
+        "properties": {
+          "options": {},
+          "challenge": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "description": "pass-through of PublicKeyCredentialCreationOptionsJSON"
+      },
+      "VerifyRegistrationResult": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "verified"
+        ]
+      },
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "VerifyRegistrationBody": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {}
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "response",
+          "challenge"
+        ]
+      },
+      "AuthenticationOptionsWrap": {
+        "type": "object",
+        "properties": {
+          "options": {},
+          "challenge": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "description": "pass-through of PublicKeyCredentialRequestOptionsJSON"
+      },
+      "AssertionResult": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean"
+          },
+          "token": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "verified"
+        ],
+        "description": "token is single-use, 120s, and required on approve"
+      },
+      "VerifyAssertionBody": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {}
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "response",
+          "challenge"
+        ]
+      },
+      "Decision": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "approve"
+                ]
+              },
+              "ttl": {
+                "type": "string",
+                "enum": [
+                  "session",
+                  "once",
+                  "10m",
+                  "1h",
+                  "24h",
+                  "30d",
+                  "always"
+                ]
+              },
+              "renew_existing": {
+                "type": "boolean"
+              },
+              "keys": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "deny",
+                    "once",
+                    "ttl"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "decision",
+              "ttl",
+              "renew_existing",
+              "keys"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "deny"
+                ]
+              }
+            },
+            "required": [
+              "decision"
+            ]
+          }
+        ],
+        "description": "the approver's answer"
+      },
+      "AskRequest": {
+        "type": "object",
+        "properties": {
+          "principal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "alias": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "address": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "note": {
+                  "type": "string",
+                  "default": ""
+                },
+                "value_hash": {
+                  "type": "string",
+                  "default": ""
+                }
+              },
+              "required": [
+                "alias",
+                "address"
+              ]
+            },
+            "minItems": 1
+          },
+          "granted": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "alias": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "alias",
+                "status"
+              ]
+            },
+            "default": []
+          }
+        },
+        "required": [
+          "principal",
+          "session",
+          "at",
+          "keys"
+        ],
+        "description": "what an agent asks for"
+      },
+      "PendingAskList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PendingAsk"
+        }
+      },
+      "PendingAsk": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "request": {
+            "type": "object",
+            "properties": {
+              "principal": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session": {
+                "type": "string",
+                "minLength": 1
+              },
+              "at": {
+                "type": "string",
+                "minLength": 1
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "alias": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "address": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "note": {
+                      "type": "string",
+                      "default": ""
+                    },
+                    "value_hash": {
+                      "type": "string",
+                      "default": ""
+                    }
+                  },
+                  "required": [
+                    "alias",
+                    "address"
+                  ]
+                },
+                "minItems": 1
+              },
+              "granted": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "alias": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "alias",
+                    "status"
+                  ]
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "principal",
+              "session",
+              "at",
+              "keys"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "request"
+        ],
+        "description": "an ask waiting for a human"
+      },
+      "AskLogRowList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/AskLogRow"
+        }
+      },
+      "AskLogRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "principal": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requested_at": {
+            "type": "string"
+          },
+          "keys_json": {
+            "type": "string"
+          },
+          "key_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "decision": {
+            "type": "string"
+          },
+          "ttl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decided_via": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "principal",
+          "session_id",
+          "requested_at",
+          "keys_json",
+          "key_count",
+          "decision",
+          "ttl",
+          "decided_at",
+          "decided_via"
+        ],
+        "description": "one recorded ask"
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "liveness + milestone",
+        "responses": {
+          "200": {
+            "description": "the server is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "how many credentials can approve, and the RP this page must use",
+        "responses": {
+          "200": {
+            "description": "capability probe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/options": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "start platform-authenticator enrollment (Touch ID / passkey)",
+        "responses": {
+          "200": {
+            "description": "creation options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationOptionsWrap"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRegistrationBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "registration checked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyRegistrationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "challenge expired or rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/assert/options": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "challenge for one touch",
+        "responses": {
+          "200": {
+            "description": "request options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticationOptionsWrap"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/assert/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyAssertionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "verified + single-use token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssertionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unknown credential / expired challenge / bad signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ask": {
+      "post": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "ask a human to approve keys (blocks until decided, fail-closed on timeout)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the approver's decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "malformed ask",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asks": {
+      "get": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "asks waiting for a human decision",
+        "responses": {
+          "200": {
+            "description": "pending asks, oldest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAskList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asks/{id}/decision": {
+      "post": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "answer a pending ask (the blocked POST /ask resolves with this)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the decision that was applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid human assertion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such pending ask (decided already, or timed out)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asks/history": {
+      "get": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "recent asks and their outcomes (append-only log)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskLogRowList"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

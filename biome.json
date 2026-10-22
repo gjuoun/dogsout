@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": true
+		"ignoreUnknown": true,
+		"includes": ["**", "!apps/web/src/styles.css"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -31,6 +32,26 @@
 		{
 			"includes": ["packages/type-contracts/gen/**"],
 			"linter": {
+				"enabled": false
+			}
+		},
+		{
+			"includes": [
+				"apps/api/drizzle/**",
+				"apps/api/openapi.json",
+				"apps/web/.nitro/**",
+				"apps/web/.output/**",
+				"apps/web/src/routeTree.gen.ts",
+				"apps/web/src/styles.css",
+				"packages/api-client/src/generated/**"
+			],
+			"linter": {
+				"enabled": false
+			},
+			"formatter": {
+				"enabled": false
+			},
+			"assist": {
 				"enabled": false
 			}
 		}

@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"lib": ["ES2023", "DOM", "DOM.Iterable"],
+		"types": ["bun", "vite/client"],
+		"paths": { "~/*": ["./src/*"] },
+		// inherited from @jtk/api-client: heyapi's vendored client runtime does not compile
+		// under exactOptionalPropertyTypes, and that code is part of this program.
+		"exactOptionalPropertyTypes": false
+	},
+	"include": ["src", "vite.config.ts"]
+}

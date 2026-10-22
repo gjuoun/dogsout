@@ -21,17 +21,39 @@ Requires [Bun](https://bun.sh) on PATH and macOS with a Secure Enclave (Apple si
 
 ## Repo layout
 
-Five packages, split along process boundaries — the seams an agent actually crosses:
+Seven packages, split along process boundaries — the seams an agent actually crosses:
 
 | package | what it holds |
 |---|---|
 | `apps/cli` | the command layer and `bin: jtk` |
-| `apps/api` | Hono/OpenAPI server — the seed of the F3 daemon |
+| `apps/api` | Hono/OpenAPI server — the seed of the F3 daemon; drizzle table definitions |
+| `apps/web` | the WebUI: approval page + agent activity panel (TanStack Start, Nitro bun) |
 | `apps/ask` | the native macOS approval window (Swift), plus its design mockup |
 | `packages/core` | the broker engine: vault, policy, session, the ask flow |
 | `packages/type-contracts` | the zod single source for every shape that crosses a boundary |
+| `packages/api-client` | heyapi output generated from `apps/api/openapi.json` — what the browser imports |
 
 Dependencies are one-way — `apps/*` → `packages/*`. An app never imports another app, and nothing in `packages/core` reaches back into `apps/`. The approval protocol has two declared homes: the wire half (the JSON that crosses into `apps/ask`) is `packages/type-contracts/src/ask.ts`; the in-process half (the `Channel` interface and its degradation chain) is `packages/core/src/ask/channel.ts`.
+
+### Type chain (one source, no second hand-written copy)
+
+```
+drizzle table (entity source) → drizzle-zod (server only) → createRoute → GET /doc (OpenAPI 3.1)
+                                                    ↓
+                    apps/api/openapi.json → heyapi codegen → packages/api-client (client only)
+```
+
+`bun run openapi:write` refreshes the spec from the live Hono routes; `bun run codegen` regenerates the client; `apps/api/src/typechain.test.ts` fails when either artifact has drifted. `bun run check:bundle` scans the built client assets for server markers (`drizzle-orm`, `bun:sqlite`, `@jtk/core`, `node:*`), and `packages/api-client/src/boundary.test.ts` allowlists the generated imports to relative paths + `zod`.
+
+### WebUI (preview)
+
+```
+bun apps/api/src/server.ts 8787                     # ask/session/grant surface + WS /events
+cd apps/web && bun run dev                          # http://localhost:5173 (approval page), /agent (panel)
+bun run drive:ui                                    # headless end-to-end: ask → decision → grant → frames
+```
+
+The approval page mirrors the native mockup (per-key 批准|本次|拒绝, six TTL tiers defaulting to 10m, a read-only held-keys section) and produces the same decision JSON as `jtk-approve --selftest`. Approving requires a WebAuthn touch on a platform authenticator; **there is no password fallback** — without an authenticator the button is disabled and the page points at the CLI/swiftui channels.
 
 ## Usage guide
 
