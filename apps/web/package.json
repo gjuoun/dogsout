@@ -1,0 +1,43 @@
+{
+	"name": "@jtk/web",
+	"version": "0.0.2",
+	"private": true,
+	"type": "module",
+	"license": "Apache-2.0",
+	"description": "junethekey WebUI — approval page + agent activity panel (F3 preview)",
+	"scripts": {
+		"routes": "tsr generate",
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "bun .output/server/index.mjs",
+		"typecheck": "tsr generate && tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@jtk/api-client": "workspace:*",
+		"@jtk/type-contracts": "workspace:*",
+		"@simplewebauthn/browser": "14.0.0",
+		"@tanstack/react-router": "1.170.45",
+		"@tanstack/react-start": "1.169.3",
+		"class-variance-authority": "0.7.1",
+		"clsx": "2.1.1",
+		"radix-ui": "1.8.1",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"tailwind-merge": "3.3.1",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@tailwindcss/vite": "4.3.3",
+		"@tanstack/nitro-v2-vite-plugin": "1.155.2",
+		"@tanstack/router-cli": "1.167.45",
+		"@types/bun": "latest",
+		"@types/react": "19.2.14",
+		"@types/react-dom": "19.2.4",
+		"@vitejs/plugin-react": "6.1.2",
+		"nitropack": "2.13.5",
+		"tailwindcss": "4.3.3",
+		"typescript": "5.9.3",
+		"vite": "8.3.5"
+	}
+}
