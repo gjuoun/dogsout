@@ -178,7 +178,11 @@ export async function createEnvelopeV2(
 ): Promise<{ file: VaultFileV2; dek: Uint8Array<ArrayBuffer> }> {
 	const dek = newDek();
 	const vaultId = randomB64url(16);
-	const slot = await wrapSe(dek, vaultId, randomB64url(6), se);
+	// base64url ids can start with "-" or "_", which CLI parsers read as a flag;
+	// force an alphanumeric head so slot ids are always safe as positionals.
+	const rawSlotId = randomB64url(6);
+	const slotId = /^[-_]/.test(rawSlotId) ? `x${rawSlotId.slice(1)}` : rawSlotId;
+	const slot = await wrapSe(dek, vaultId, slotId, se);
 	const file: VaultFileV2 = {
 		version: 2,
 		vault_id: vaultId,
