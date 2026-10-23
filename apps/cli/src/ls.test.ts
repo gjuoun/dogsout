@@ -120,8 +120,11 @@ describe("dogsout ls output modes", () => {
 	test("every address appears as one connector leaf in the tty tree", async () => {
 		const piped = (await runLs([], pipeIo))._unsafeUnwrap().split("\n");
 		const terminal = (await runLs([], ttyIo))._unsafeUnwrap().split("\n");
-		// every vault/item/field node line (root excluded) is a connector leaf
-		expect(terminal.filter((l) => l.includes("── .")).length).toBe(piped.length);
+		// each address's field (deepest segment) shows up exactly once as a connector leaf
+		for (const addr of piped) {
+			const field = `.${addr.split("/").pop()}`;
+			expect(terminal.filter((l) => l.includes("──") && l.endsWith(field)).length).toBe(1);
+		}
 	});
 
 	test("a glob narrows the tty tree without losing the vault root", async () => {
