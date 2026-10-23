@@ -1,7 +1,7 @@
-import { openData } from "@jtk/core";
+import { openData } from "@dogsout/core";
 import { command, flag } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { runJtk, withMeta } from "./cmd.ts";
+import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export function lsCommand() {
@@ -21,16 +21,16 @@ export function lsCommand() {
 					summary[v] = {};
 					for (const [i, item] of Object.entries(items)) {
 						summary[v][i] = Object.keys(item.fields);
-						for (const f of Object.keys(item.fields)) lines.push(`jtk://${v}/${i}/${f}`);
+						for (const f of Object.keys(item.fields)) lines.push(`dogsout://${v}/${i}/${f}`);
 					}
 				}
 				return ok(json ? JSON.stringify({ vaults: summary }, null, 2) : lines.join("\n"));
 			},
 		}),
-		{ reads: ["vault"], writes: [], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: ["vault"], writes: [], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runLs(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(lsCommand(), argv);
+	return runDogsout<string>(lsCommand(), argv);
 }

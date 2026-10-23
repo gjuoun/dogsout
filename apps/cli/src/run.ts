@@ -5,6 +5,7 @@ import {
 	grantUsable,
 	loadConfig,
 	loadGrants,
+	mygoChannel,
 	openSessionFlow,
 	parseEnvFile,
 	prepareRun,
@@ -14,23 +15,22 @@ import {
 	resolveToAddress,
 	resumeReplayFlow,
 	sha256Hex,
-	swiftuiChannel,
-} from "@jtk/core";
-import type { Config, VaultData } from "@jtk/type-contracts";
-import { SessionManifestSchema } from "@jtk/type-contracts";
+} from "@dogsout/core";
+import type { Config, VaultData } from "@dogsout/type-contracts";
+import { SessionManifestSchema } from "@dogsout/type-contracts";
 import { array, command, flag, multioption, option, optional, rest, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { runJtk, withMeta } from "./cmd.ts";
+import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv, openDataOnce } from "./context.ts";
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 function principalFromEnv(): string {
-	return process.env.JTK_PRINCIPAL ?? "cli@" + hostname();
+	return process.env.DOGSOUT_PRINCIPAL ?? "cli@" + hostname();
 }
 
 function askBudgetMs(): number {
-	const raw = process.env.JTK_ASK_TIMEOUT;
+	const raw = process.env.DOGSOUT_ASK_TIMEOUT;
 	const n = raw ? Number(raw) : Number.NaN;
 	return Number.isFinite(n) && n > 0 ? n : 120_000;
 }
@@ -44,13 +44,13 @@ interface RunArgs {
 	cmd: string[];
 }
 
-/** jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] -- cmd args (spec §5.2 + F2 ask flow). */
+/** dogsout run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] -- cmd args (spec §5.2 + F2 ask flow). */
 async function runCore(a: RunArgs): Promise<Result<number, string>> {
 	// rest() keeps the leading `--` token; the child command starts after it
 	const cmd = a.cmd[0] === "--" ? a.cmd.slice(1) : a.cmd;
 	if (cmd.length === 0) {
 		return err(
-			"usage: jtk run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]",
+			"usage: dogsout run --env ALIAS [--from-env FILE] [--session MANIFEST [--resume]] [--principal NAME] -- <cmd> [args...]",
 		);
 	}
 	const names = [...a.env];
@@ -59,7 +59,7 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 			return err(
 				"--env wants a valid env var name (alias), got: " +
 					n +
-					" — register an alias or use --from-env with jtk:// refs",
+					" — register an alias or use --from-env with dogsout:// refs",
 			);
 		}
 	}
@@ -68,7 +68,7 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 	const inject: Record<string, string> = {};
 	const refBindings: Array<{ key: string; addr: string }> = [];
 	let sessionClose: (() => Promise<Result<void, string>>) | undefined;
-	// --from-env FILE: .env style — KEY=literal passes through, KEY=jtk://… resolves from vault (through policy).
+	// --from-env FILE: .env style — KEY=literal passes through, KEY=dogsout://… resolves from vault (through policy).
 	if (a.fromEnv) {
 		let text: string;
 		try {
@@ -77,6 +77,12 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 			return err("cannot read: " + a.fromEnv);
 		}
 		const plan = parseEnvFile(text);
+		if (plan.legacy.length > 0) {
+			const first = plan.legacy[0] as { key: string; value: string };
+			return err(
+				`${first.key} uses the retired jtk:// scheme — rewrite it as dogsout:// (run: dogsout migrate for stored aliases)`,
+			);
+		}
 		if (plan.skipped.length > 0) {
 			return err(plan.skipped[0]?.key + " uses op:// — the 1Password adapter lands in a later feature");
 		}
@@ -98,7 +104,7 @@ async function runCore(a: RunArgs): Promise<Result<number, string>> {
 		if (opened.isErr()) return err(opened.error);
 
 		const principal = a.principal ?? principalFromEnv();
-		const channels = [swiftuiChannel, cliChannel];
+		const channels = [mygoChannel, cliChannel];
 		const budget = askBudgetMs();
 
 		let sessionId: string | undefined;
@@ -211,7 +217,7 @@ export function runCommand() {
 		{
 			reads: ["vault", "config", "grants", "sessions"],
 			writes: ["grants", "sessions"],
-			env: ["JTK_HOME", "JTK_SE_HELPER", "JTK_PRINCIPAL", "JTK_ASK_TIMEOUT", "JTK_APPROVE_HELPER"],
+			env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER", "DOGSOUT_PRINCIPAL", "DOGSOUT_ASK_TIMEOUT", "DOGSOUT_APPROVE_HELPER"],
 		},
 	);
 }
@@ -224,7 +230,7 @@ export async function runRun(argv: string[]): Promise<Result<number, string>> {
 				"nested field names are not valid env names; use aliases or --from-env",
 		);
 	}
-	return runJtk<number>(runCommand(), argv);
+	return runDogsout<number>(runCommand(), argv);
 }
 
 /** Resume replay: re-create a session grant from the replay list without asking (permissions, not values). */

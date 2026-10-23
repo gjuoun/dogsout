@@ -1,4 +1,4 @@
-import type { UiEvent } from "@jtk/type-contracts";
+import type { UiEvent } from "@dogsout/type-contracts";
 import { useEffect, useRef } from "react";
 import { EVENTS_URL } from "~/api/client";
 import type { Connection } from "./reducer";

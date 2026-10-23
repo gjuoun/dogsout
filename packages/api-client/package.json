@@ -1,10 +1,10 @@
 {
-	"name": "@jtk/api-client",
+	"name": "@dogsout/api-client",
 	"version": "0.0.2",
 	"private": true,
 	"type": "module",
 	"license": "Apache-2.0",
-	"description": "junethekey generated API client — pure client artifacts from the OpenAPI 3.1 contract",
+	"description": "dogsout generated API client — pure client artifacts from the OpenAPI 3.1 contract",
 	"exports": {
 		".": "./src/index.ts",
 		"./generated/*": "./src/generated/*"

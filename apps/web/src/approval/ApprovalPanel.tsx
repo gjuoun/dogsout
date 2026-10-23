@@ -1,4 +1,4 @@
-import type { AskRequest } from "@jtk/api-client";
+import type { AskRequest } from "@dogsout/api-client";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -20,7 +20,7 @@ export interface ApprovalPanelProps {
 }
 
 /**
- * The approval window, in the browser. Same three regions as the SwiftUI mockup:
+ * The approval window, in the browser. Same three regions as the design mockup:
  * header (principal + session + time), decision area (per-key three-state + six-tier TTL +
  * approve-N / deny-all), and a read-only "already held" list that never feeds the decision.
  */

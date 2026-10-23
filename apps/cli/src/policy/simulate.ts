@@ -1,4 +1,4 @@
-import { evaluate, loadGrants, parseAddress, resolveToAddress, sha256Hex } from "@jtk/core";
+import { evaluate, loadGrants, parseAddress, resolveToAddress, sha256Hex } from "@dogsout/core";
 import { array, command, multioption, option, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { activeSessionIds, ctxAndConfig, openDataOnce } from "../context.ts";

@@ -5,7 +5,7 @@
 		"lib": ["ES2023", "DOM", "DOM.Iterable"],
 		"types": ["bun", "vite/client"],
 		"paths": { "~/*": ["./src/*"] },
-		// inherited from @jtk/api-client: heyapi's vendored client runtime does not compile
+		// inherited from @dogsout/api-client: heyapi's vendored client runtime does not compile
 		// under exactOptionalPropertyTypes, and that code is part of this program.
 		"exactOptionalPropertyTypes": false
 	},

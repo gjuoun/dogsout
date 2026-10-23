@@ -1,6 +1,6 @@
+import { dogsoutHome } from "@dogsout/core";
+import { type AskRequest, DEFAULT_TTL, type Decision, type KeyChoice } from "@dogsout/type-contracts";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { jtkHome } from "@jtk/core";
-import { type AskRequest, DEFAULT_TTL, type Decision, type KeyChoice } from "@jtk/type-contracts";
 import { cors } from "hono/cors";
 import { consumeToken } from "./auth/webauthn.ts";
 import type { ApiDb } from "./db/client.ts";
@@ -21,7 +21,7 @@ import { watchHome } from "./watch.ts";
 export interface ServerOptions {
 	/** Caller owns the store (and runs migrations): keeps the app testable with `:memory:`. */
 	db: ApiDb;
-	/** Broker home (grants.json / sessions.json). Defaults to `JTK_HOME` / ~/.config/junethekey. */
+	/** Broker home (grants.json / sessions.json). Defaults to `DOGSOUT_HOME` / ~/.config/dogsout. */
 	home?: string;
 	/** Human-assertion gate for decisions; omitted in unit tests, wired to WebAuthn in main. */
 	authorize?: ((request: Request, decision: Decision) => Promise<boolean>) | undefined;
@@ -38,15 +38,15 @@ export interface ServerOptions {
  */
 export function createServer(options: ServerOptions) {
 	const { db } = options;
-	const home = options.home ?? jtkHome();
+	const home = options.home ?? dogsoutHome();
 	const app = new OpenAPIHono();
 
 	app.use(
 		"*",
 		cors({
-			origin: process.env.JTK_WEB_ORIGIN ?? "http://localhost:5173",
+			origin: process.env.DOGSOUT_WEB_ORIGIN ?? "http://localhost:5173",
 			allowMethods: ["GET", "POST", "OPTIONS"],
-			allowHeaders: ["content-type", "x-jtk-assertion"],
+			allowHeaders: ["content-type", "x-dogsout-assertion"],
 		}),
 	);
 
@@ -98,7 +98,7 @@ export function createServer(options: ServerOptions) {
 		authorize:
 			options.authorize ??
 			(async (request, decision) =>
-				decision.decision === "deny" || consumeToken(request.headers.get("x-jtk-assertion") ?? undefined)),
+				decision.decision === "deny" || consumeToken(request.headers.get("x-dogsout-assertion") ?? undefined)),
 		onDecided: (id, decision) => broadcast({ type: "ask.decided", at: new Date().toISOString(), id, decision }),
 	});
 	registerEvents(app, { home });
@@ -112,7 +112,7 @@ if (import.meta.main) {
 	const port = Number(process.argv[2] ?? 8787);
 	const { db } = openApiDb();
 	migrateApiDb(db);
-	const home = jtkHome();
+	const home = dogsoutHome();
 	watchHome(home);
 	// Same wiring drive:ui uses: without the hono/bun websocket handler the /events
 	// upgrade never reaches the route and the agent panel gets no frames.

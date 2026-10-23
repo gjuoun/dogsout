@@ -1,5 +1,5 @@
-import { grantStatusLabel, loadGrants, loadSessions } from "@jtk/core";
-import type { UiEvent } from "@jtk/type-contracts";
+import { grantStatusLabel, loadGrants, loadSessions } from "@dogsout/core";
+import type { UiEvent } from "@dogsout/type-contracts";
 
 /**
  * Snapshot frames, not deltas: the browser replaces its grant/session view wholesale, so

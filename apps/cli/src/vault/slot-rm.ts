@@ -1,4 +1,4 @@
-import { openData, removeSlot, vaultPath, writeVaultFile } from "@jtk/core";
+import { openData, removeSlot, vaultPath, writeVaultFile } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { ctxFromEnv } from "../context.ts";

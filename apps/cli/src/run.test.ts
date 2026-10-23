@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadConfig, writeConfig } from "@jtk/core";
+import { loadConfig, writeConfig } from "@dogsout/core";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
 import { runInit } from "./init.ts";
@@ -14,12 +14,12 @@ const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 let home = "";
 
 beforeAll(async () => {
-	home = mkdtempSync(join(tmpdir(), "jtk-run-"));
-	process.env.JTK_HOME = home;
-	process.env.JTK_SE_HELPER = FAKE_SE;
+	home = mkdtempSync(join(tmpdir(), "dogsout-run-"));
+	process.env.DOGSOUT_HOME = home;
+	process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
-	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-inject-me"));
-	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+	await runSet(["dogsout://dev/zai/api_key", "--stdin"], stdinOf("sk-inject-me"));
+	await runAlias(["ZAI_API_KEY", "dogsout://dev/zai/api_key"]);
 	// F2: run is now a policy surface — allow-all rule keeps these injection-mechanics tests focused
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) throw new Error(cfg.error);
@@ -29,12 +29,12 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
-	delete process.env.JTK_SE_HELPER;
+	delete process.env.DOGSOUT_HOME;
+	delete process.env.DOGSOUT_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 
-describe("jtk run env injection", () => {
+describe("dogsout run env injection", () => {
 	test("without any rule or grant, run is fail-closed (no channel decides)", async () => {
 		// strip the allow rule for one call
 		const cfg = await loadConfig(home);
@@ -43,9 +43,9 @@ describe("jtk run env injection", () => {
 		cfg.value.rules = [];
 		const w = await writeConfig(home, cfg.value);
 		if (w.isErr()) throw new Error(w.error);
-		process.env.JTK_APPROVE_HELPER = "/nonexistent/jtk-approve";
+		process.env.DOGSOUT_APPROVE_HELPER = "/nonexistent/dogsout-approve";
 		const r = await runRun(["--env", "ZAI_API_KEY", "--", "sh", "-c", "exit 0"]);
-		delete process.env.JTK_APPROVE_HELPER;
+		delete process.env.DOGSOUT_APPROVE_HELPER;
 		if (r.isErr()) expect(r.error).toContain("fail-closed");
 		else throw new Error("expected fail-closed refusal, got exit " + r.value);
 		const restore = await loadConfig(home);
@@ -62,14 +62,14 @@ describe("jtk run env injection", () => {
 	});
 
 	test("--from-item is removed: unknown flag, loud guidance", async () => {
-		const r = await runRun(["--from-item", "jtk://dev/zai", "--", "sh", "-c", "true"]);
+		const r = await runRun(["--from-item", "dogsout://dev/zai", "--", "sh", "-c", "true"]);
 		expect(r.isErr()).toBe(true);
 		if (r.isErr()) expect(r.error).toContain("removed");
 	});
 
-	test("--from-env FILE: literals pass through, jtk:// refs resolve, op:// fails loudly", async () => {
+	test("--from-env FILE: literals pass through, dogsout:// refs resolve, op:// fails loudly", async () => {
 		const envFile = join(home, "run.env");
-		await Bun.write(envFile, "LITERAL_X=plain-val\nINJECTED_Y=jtk://dev/zai/api_key\n");
+		await Bun.write(envFile, "LITERAL_X=plain-val\nINJECTED_Y=dogsout://dev/zai/api_key\n");
 		const r = await runRun([
 			"--from-env",
 			envFile,
@@ -95,7 +95,7 @@ describe("jtk run env injection", () => {
 	});
 
 	test("address as --env name is rejected with guidance", async () => {
-		const r = await runRun(["--env", "jtk://dev/zai/api_key", "--", "sh", "-c", "exit 0"]);
+		const r = await runRun(["--env", "dogsout://dev/zai/api_key", "--", "sh", "-c", "exit 0"]);
 		expect(r.isErr()).toBe(true);
 		if (r.isErr()) expect(r.error).toContain("--from-env");
 	});

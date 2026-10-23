@@ -5,7 +5,7 @@ import {
 	type VaultData,
 	type VaultFileV2,
 	vaultFileVersion,
-} from "@jtk/type-contracts";
+} from "@dogsout/type-contracts";
 import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 import { configPath, vaultPath } from "./paths.ts";
@@ -26,11 +26,11 @@ export interface OpenedEnvelope {
 }
 
 export const V1_UNSUPPORTED =
-	"vault v1 is no longer supported — password vaults were removed (cold cut 2026-10-14); re-create it with jtk init --force (the old file cannot be read)";
+	"vault v1 is no longer supported — password vaults were removed (cold cut 2026-10-14); re-create it with dogsout init --force (the old file cannot be read)";
 
 export async function loadConfig(home: string): Promise<Result<Config, string>> {
 	const file = Bun.file(configPath(home));
-	if (!file.exists()) return err(`config not found: ${configPath(home)} — run: jtk init`);
+	if (!file.exists()) return err(`config not found: ${configPath(home)} — run: dogsout init`);
 	let raw: unknown;
 	try {
 		raw = JSON.parse(await file.text());
@@ -45,7 +45,7 @@ export async function loadConfig(home: string): Promise<Result<Config, string>> 
 function corrupt(home: string): string {
 	const baks = listVaultBackups(home);
 	return baks.length > 0
-		? `vault corrupt — backup vault.enc.bak.${baks[0]} exists: run jtk vault restore`
+		? `vault corrupt — backup vault.enc.bak.${baks[0]} exists: run dogsout vault restore`
 		: "vault corrupt";
 }
 
@@ -53,14 +53,14 @@ export async function openData(ctx: Ctx): Promise<Result<{ envelope: OpenedEnvel
 	return openDataAt(ctx, vaultPath(ctx.home));
 }
 
-/** Open a vault file at an explicit path (e.g. a rolling backup before `jtk vault restore` promotes it). */
+/** Open a vault file at an explicit path (e.g. a rolling backup before `dogsout vault restore` promotes it). */
 export async function openDataAt(
 	ctx: Ctx,
 	path: string,
 ): Promise<Result<{ envelope: OpenedEnvelope; data: VaultData }, string>> {
 	const rawR = await readVaultRaw(path);
 	if (rawR.isErr()) {
-		return err(rawR.error.kind === "corrupt" ? corrupt(ctx.home) : `vault not found: ${path} — run: jtk init`);
+		return err(rawR.error.kind === "corrupt" ? corrupt(ctx.home) : `vault not found: ${path} — run: dogsout init`);
 	}
 	const version = vaultFileVersion(rawR.value);
 	if (version === 1) return err(V1_UNSUPPORTED);
@@ -70,7 +70,7 @@ export async function openDataAt(
 	const slot = await pickLocalSeSlot(file);
 	if (!slot) {
 		return err(
-			`no unlock slot for this Mac (vault ${file.fingerprint}) — reset with your passkey in the jtk WebUI (F3), then this Mac gets its own Touch ID slot`,
+			`no unlock slot for this Mac (vault ${file.fingerprint}) — reset with your passkey in the dogsout WebUI (F3), then this Mac gets its own Touch ID slot`,
 		);
 	}
 	const dek = await unlockWithSe(file, slot, seEcdh);

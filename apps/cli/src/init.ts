@@ -1,7 +1,7 @@
-import { configPath, initFiles, jtkHome } from "@jtk/core";
+import { configPath, dogsoutHome, initFiles } from "@dogsout/core";
 import { command, flag } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { defaultIo, fail, type Io, runJtk, withMeta } from "./cmd.ts";
+import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 
 /**
  * init: no password. Mints a Secure Enclave key, seals an empty vault under a fresh DEK and
@@ -14,7 +14,7 @@ export function initCommand(_io: Io = defaultIo) {
 			description: "create vault.enc + config.json — Touch ID (Secure Enclave), no password",
 			args: { force: flag({ long: "force", description: "reset an already-initialized home (destructive)" }) },
 			handler: async ({ force }): Promise<Result<string, string>> => {
-				const home = jtkHome();
+				const home = dogsoutHome();
 				if ((await Bun.file(configPath(home)).exists()) && !force) {
 					return fail(`already initialized: ${configPath(home)} (use --force to reset)`);
 				}
@@ -26,10 +26,10 @@ export function initCommand(_io: Io = defaultIo) {
 				);
 			},
 		}),
-		{ reads: [], writes: ["config", "vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: [], writes: ["config", "vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runInit(argv: string[], io: Io = defaultIo): Promise<Result<string, string>> {
-	return runJtk<string>(initCommand(io), argv);
+	return runDogsout<string>(initCommand(io), argv);
 }

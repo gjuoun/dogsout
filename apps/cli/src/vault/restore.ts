@@ -1,5 +1,5 @@
 import { chmodSync, copyFileSync, existsSync, renameSync } from "node:fs";
-import { listVaultBackups, openDataAt, vaultBackupPath, vaultBrokenPath, vaultPath } from "@jtk/core";
+import { listVaultBackups, openDataAt, vaultBackupPath, vaultBrokenPath, vaultPath } from "@dogsout/core";
 import { command, number, option, optional } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { ctxFromEnv } from "../context.ts";

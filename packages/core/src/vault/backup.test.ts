@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { emptyVault } from "@jtk/type-contracts";
+import { emptyVault } from "@dogsout/type-contracts";
 import { vaultBackupPath } from "../paths.ts";
 import { createEnvelopeV2 } from "./envelope.ts";
 import { listVaultBackups, writeVaultFile } from "./vault.ts";
@@ -19,7 +19,7 @@ async function envelope() {
 
 describe("rolling backups (2 copies)", () => {
 	test("first write makes no backup; later writes keep the previous two files", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-bak-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-bak-"));
 		try {
 			const path = join(home, "vault.enc");
 			const v = [0, 1, 2].map(async () => envelope());
@@ -43,7 +43,7 @@ describe("rolling backups (2 copies)", () => {
 	});
 
 	test("a failed write never replaces vault.enc and never rotates backups", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-bak-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-bak-"));
 		const path = join(home, "vault.enc");
 		try {
 			const a = await envelope();

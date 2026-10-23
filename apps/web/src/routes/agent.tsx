@@ -1,5 +1,5 @@
-import { type AskLogRow, getAsksHistory } from "@jtk/api-client";
-import type { UiEvent } from "@jtk/type-contracts";
+import { type AskLogRow, getAsksHistory } from "@dogsout/api-client";
+import type { UiEvent } from "@dogsout/type-contracts";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useReducer } from "react";
 import { initialPanelState, panelReducer } from "~/agent/reducer";

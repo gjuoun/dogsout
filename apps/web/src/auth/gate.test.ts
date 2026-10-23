@@ -9,7 +9,7 @@ describe("approval gate (fail-closed, no password)", () => {
 	test("no platform authenticator blocks approval and names the fallback channels", () => {
 		const reason = approvalBlockedReason({ available: false, credentials: 1 });
 		expect(reason).toContain("CLI");
-		expect(reason).toContain("swiftui");
+		expect(reason).toContain("mygo");
 	});
 
 	test("zero credentials blocks approval with an enrollment hint", () => {

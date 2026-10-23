@@ -1,4 +1,4 @@
-import type { AskRequest, Config, Decision, SessionManifest, TtlTier, VaultData } from "@jtk/type-contracts";
+import type { AskRequest, Config, Decision, SessionManifest, TtlTier, VaultData } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import { digSubpath, parseAddress } from "../address.ts";
 import { evaluate, type Verdict } from "../policy/evaluate.ts";

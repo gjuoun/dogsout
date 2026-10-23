@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { AskLogRow } from "@jtk/api-client";
-import type { UiEvent } from "@jtk/type-contracts";
+import type { AskLogRow } from "@dogsout/api-client";
+import type { UiEvent } from "@dogsout/type-contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { initialPanelState, type PanelState, panelReducer } from "./reducer.ts";
 import { Timeline } from "./Timeline.tsx";
@@ -38,7 +38,7 @@ const ASK = {
 	principal: "claude-code@laptop",
 	session: "sess_1",
 	at: AT,
-	keys: [{ alias: "gh", address: "jtk://dev/gh/pat", note: "gh", value_hash: "aa" }],
+	keys: [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "gh", value_hash: "aa" }],
 	granted: [],
 };
 

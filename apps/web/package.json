@@ -1,10 +1,10 @@
 {
-	"name": "@jtk/web",
+	"name": "@dogsout/web",
 	"version": "0.0.2",
 	"private": true,
 	"type": "module",
 	"license": "Apache-2.0",
-	"description": "junethekey WebUI — approval page + agent activity panel (F3 preview)",
+	"description": "dogsout WebUI — approval page + agent activity panel (F3 preview)",
 	"scripts": {
 		"routes": "tsr generate",
 		"dev": "vite dev",
@@ -14,8 +14,8 @@
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@jtk/api-client": "workspace:*",
-		"@jtk/type-contracts": "workspace:*",
+		"@dogsout/api-client": "workspace:*",
+		"@dogsout/type-contracts": "workspace:*",
 		"@simplewebauthn/browser": "14.0.0",
 		"@tanstack/react-router": "1.170.45",
 		"@tanstack/react-start": "1.169.3",

@@ -9,14 +9,14 @@ import { initFiles, loadConfig, nowIso, openData, saveData, writeConfig } from "
 import { SE_HELPER_ENV } from "../vault/se.ts";
 import type { Channel } from "./channel.ts";
 import { prepareRun } from "./flow.ts";
-import { HELPER_ENV, swiftuiChannel } from "./swiftui.ts";
+import { HELPER_ENV, mygoChannel } from "./mygo.ts";
 
-const ADDRESS = "jtk://dev/zai/api_key";
+const ADDRESS = "dogsout://dev/zai/api_key";
 const ALIAS = "ZAI_API_KEY";
 let home = "";
 let fakeHelper = "";
 
-/** Seed a field the way `jtk set` does, minus the CLI layer (store primitives only). */
+/** Seed a field the way `dogsout set` does, minus the CLI layer (store primitives only). */
 async function seedValue(value: string): Promise<void> {
 	const parsed = parseAddress(ADDRESS);
 	if (parsed.isErr()) throw new Error(parsed.error);
@@ -34,7 +34,7 @@ async function seedValue(value: string): Promise<void> {
 	if (saved.isErr()) throw new Error(saved.error);
 }
 
-/** Register an alias the way `jtk alias` does, and drop the default rules for this home. */
+/** Register an alias the way `dogsout alias` does, and drop the default rules for this home. */
 async function seedAlias(): Promise<void> {
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) throw new Error(cfg.error);
@@ -77,8 +77,8 @@ const broken: Channel = {
 };
 
 beforeAll(async () => {
-	home = mkdtempSync(join(tmpdir(), "jtk-ask-"));
-	process.env.JTK_HOME = home;
+	home = mkdtempSync(join(tmpdir(), "dogsout-ask-"));
+	process.env.DOGSOUT_HOME = home;
 	process.env[SE_HELPER_ENV] = join(import.meta.dir, "..", "vault", "helper", "fake-se.ts");
 	const init = await initFiles(home);
 	if (init.isErr()) throw new Error(init.error);
@@ -92,7 +92,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
+	delete process.env.DOGSOUT_HOME;
 	delete process.env[SE_HELPER_ENV];
 	delete process.env[HELPER_ENV];
 	delete process.env.FAKE_APPROVE_MODE;
@@ -191,7 +191,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 		if (r.isOk()) expect(r.value.inject[ALIAS]).toBe("sk-rotated");
 	});
 
-	test("swiftui channel end-to-end with the fake helper binary", async () => {
+	test("mygo channel end-to-end with the fake helper binary", async () => {
 		process.env[HELPER_ENV] = fakeHelper;
 		const r = await prepareRun({
 			home,
@@ -200,7 +200,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			principal: "tester@unit",
 			groups: [],
 			names: [ALIAS],
-			channels: [swiftuiChannel],
+			channels: [mygoChannel],
 			askBudgetMs: 10_000,
 		});
 		delete process.env[HELPER_ENV];
@@ -217,7 +217,7 @@ describe("ask flow (policy -> channel -> grant)", () => {
 			principal: "tester-crash@unit",
 			groups: [],
 			names: [ALIAS],
-			channels: [swiftuiChannel],
+			channels: [mygoChannel],
 			askBudgetMs: 10_000,
 		});
 		delete process.env[HELPER_ENV];

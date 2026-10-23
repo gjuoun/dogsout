@@ -40,7 +40,7 @@ describe("type chain gate", () => {
 	});
 
 	test("checked-in client equals a fresh generation from openapi.json", async () => {
-		const out = mkdtempSync(join(tmpdir(), "jtk-codegen-"));
+		const out = mkdtempSync(join(tmpdir(), "dogsout-codegen-"));
 		tmpDirs.push(out);
 		await createClient({ input: SPEC_FILE, output: { path: out, clean: true }, plugins: [...PLUGINS] });
 		const fresh = walk(out);

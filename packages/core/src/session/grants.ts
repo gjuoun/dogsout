@@ -1,5 +1,5 @@
-import type { Settings, TtlTier } from "@jtk/type-contracts";
-import { type GrantMeta, type GrantsFile, parseGrantsFile } from "@jtk/type-contracts";
+import type { Settings, TtlTier } from "@dogsout/type-contracts";
+import { type GrantMeta, type GrantsFile, parseGrantsFile } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import { grantsPath } from "../paths.ts";
 import { expiryFor } from "../policy/ttl.ts";

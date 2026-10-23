@@ -8,6 +8,7 @@ import { importEnvCommand } from "./import-env.ts";
 import { initCommand } from "./init.ts";
 import { lsCommand } from "./ls.ts";
 import { mapCommand } from "./map.ts";
+import { migrateCommand } from "./migrate.ts";
 import {
 	configSetCommand,
 	configShowCommand,
@@ -38,6 +39,7 @@ export const COMMANDS = {
 	rm: rmCommand(),
 	alias: aliasCommand(),
 	map: mapCommand(),
+	migrate: migrateCommand(),
 	run: runCommand(),
 	policy: policyCommand(),
 	grants: grantsCommand(),

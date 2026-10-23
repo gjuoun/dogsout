@@ -3,19 +3,19 @@ import { resolveToAddress } from "./resolve.ts";
 
 describe("map resolution", () => {
 	test("slot -> alias -> address resolves through the chain", () => {
-		const cfg = { aliases: { ZAI_API_KEY: "jtk://dev/zai/api_key" }, maps: { zai: "ZAI_API_KEY" } };
+		const cfg = { aliases: { ZAI_API_KEY: "dogsout://dev/zai/api_key" }, maps: { zai: "ZAI_API_KEY" } };
 		const r = resolveToAddress("zai", cfg);
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
-			expect(r.value.address).toBe("jtk://dev/zai/api_key");
-			expect(r.value.chain).toEqual(["zai", "ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+			expect(r.value.address).toBe("dogsout://dev/zai/api_key");
+			expect(r.value.chain).toEqual(["zai", "ZAI_API_KEY", "dogsout://dev/zai/api_key"]);
 		}
 	});
 
 	test("slot chains compose slot -> slot -> address", () => {
-		const cfg = { aliases: { A: "jtk://v/i/f" }, maps: { b: "a", a: "A" } };
+		const cfg = { aliases: { A: "dogsout://v/i/f" }, maps: { b: "a", a: "A" } };
 		const r = resolveToAddress("b", cfg);
-		expect(r.isOk() && r.value.address).toBe("jtk://v/i/f");
+		expect(r.isOk() && r.value.address).toBe("dogsout://v/i/f");
 	});
 
 	test("cycles are detected, not hung", () => {

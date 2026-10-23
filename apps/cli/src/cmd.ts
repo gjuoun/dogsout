@@ -10,7 +10,7 @@ export function fail(message: string): Result<never, string> {
 export type Resource = "config" | "vault" | "grants" | "sessions";
 
 /** Per-command metadata consumed by the notebook feature map (ctx/check). */
-export interface JtkMeta {
+export interface DogsoutMeta {
 	readonly reads: readonly Resource[];
 	readonly writes: readonly Resource[];
 	readonly env: readonly string[];
@@ -20,7 +20,7 @@ export interface JtkMeta {
 type Runnable = Parameters<typeof runSafely>[0];
 
 /** Attach map metadata to a command without disturbing its type. */
-export function withMeta<C extends object>(cmd: C, meta: JtkMeta): C & { readonly meta: JtkMeta } {
+export function withMeta<C extends object>(cmd: C, meta: DogsoutMeta): C & { readonly meta: DogsoutMeta } {
 	return { ...cmd, meta };
 }
 
@@ -35,7 +35,7 @@ export function parseErrorMessage(exit: unknown): string {
  * Accepts a single command (ok value = handler return) or a subcommands tree
  * (ok value = {command, value}); both unwrap to the handler's Result.
  */
-export async function runJtk<T>(cmd: Runnable, argv: string[]): Promise<Result<T, string>> {
+export async function runDogsout<T>(cmd: Runnable, argv: string[]): Promise<Result<T, string>> {
 	const r = await runSafely(cmd, argv);
 	if (r._tag === "error") return err(parseErrorMessage(r.error));
 	return unwrapRunnerOutput(r.value) as Result<T, string>;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { emptyVault, type VaultData } from "@jtk/type-contracts";
+import { emptyVault, type VaultData } from "@dogsout/type-contracts";
 import {
 	createEnvelopeV2,
 	type Ecdh,

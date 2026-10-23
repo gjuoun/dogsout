@@ -1,4 +1,4 @@
-import type { AskRequest, KeyChoice, TtlTier } from "@jtk/type-contracts";
+import type { AskRequest, KeyChoice, TtlTier } from "@dogsout/type-contracts";
 
 /**
  * In-memory registry of asks waiting for a human. Deliberately not persisted: a pending

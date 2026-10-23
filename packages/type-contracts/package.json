@@ -1,10 +1,10 @@
 {
-	"name": "@jtk/type-contracts",
+	"name": "@dogsout/type-contracts",
 	"version": "0.0.2",
 	"private": true,
 	"type": "module",
 	"license": "Apache-2.0",
-	"description": "junethekey runtime contracts - zod schemas, the single source of truth",
+	"description": "dogsout runtime contracts - zod schemas, the single source of truth",
 	"exports": {
 		".": "./src/index.ts"
 	},

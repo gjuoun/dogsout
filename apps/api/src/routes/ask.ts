@@ -1,5 +1,5 @@
+import type { AskRequest as AskRequestData, Decision as DecisionData } from "@dogsout/type-contracts";
 import { createRoute, type OpenAPIHono } from "@hono/zod-openapi";
-import type { AskRequest as AskRequestData, Decision as DecisionData } from "@jtk/type-contracts";
 import { AskRequest, Decision, ErrorBody } from "../openapi.ts";
 
 const route = createRoute({

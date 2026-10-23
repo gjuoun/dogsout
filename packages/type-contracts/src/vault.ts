@@ -55,7 +55,7 @@ export const SeSlotSchema = z.object({
 });
 export type SeSlot = z.infer<typeof SeSlotSchema>;
 
-/** Passkey slot (enrolled only through the F3 WebUI): KEK = HKDF(PRF output, salt vault_id, info "jtk/passkey-kek/v1"). */
+/** Passkey slot (enrolled only through the F3 WebUI): KEK = HKDF(PRF output, salt vault_id, info "jtk/passkey-kek/v1") — a frozen wire constant, same rule as envelope.ts. */
 export const PasskeySlotSchema = z.object({
 	kind: z.literal("passkey"),
 	...SlotBase,

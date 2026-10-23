@@ -20,7 +20,7 @@ export const GrantMetaSchema = z.object({
 });
 export type GrantMeta = z.infer<typeof GrantMetaSchema>;
 
-/** grants.json — the whole persisted store (0600 atomic writes, JTK_HOME). */
+/** grants.json — the whole persisted store (0600 atomic writes, DOGSOUT_HOME). */
 export const GrantsFileSchema = z.object({
 	version: z.literal(1),
 	grants: z.array(GrantMetaSchema),

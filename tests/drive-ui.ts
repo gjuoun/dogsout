@@ -4,7 +4,7 @@
  *
  * asker (this script) POSTs /ask → the ask blocks → this script plays the human and
  * POSTs the decision the mockup produces → the asker receives it → the asker applies it
- * exactly as the CLI would (core.recordApproval) → the JTK_HOME watcher pushes
+ * exactly as the CLI would (core.recordApproval) → the DOGSOUT_HOME watcher pushes
  * grant.changed to the WebSocket. Every frame here is one the browser would render.
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -20,7 +20,7 @@ import { migrateApiDb } from "../apps/api/src/db/migrate.ts";
 import { createServer } from "../apps/api/src/server.ts";
 import { watchHome } from "../apps/api/src/watch.ts";
 // Relative package paths: the repo root is not a workspace package, so bare
-// `@jtk/*` specifiers do not resolve from here (tests/e2e.ts drives the CLI instead).
+// `@dogsout/*` specifiers do not resolve from here (tests/e2e.ts drives the CLI instead).
 import { recordApproval } from "../packages/core/src/index.ts";
 import type { UiEvent } from "../packages/type-contracts/src/index.ts";
 
@@ -38,9 +38,19 @@ const ASK = {
 	session: "sess_9f2ac31e",
 	at: new Date().toISOString(),
 	keys: [
-		{ alias: "gh", address: "jtk://dev/gh/pat", note: "jtk://dev/gh/pat", value_hash: "aa11bb22cc33" },
-		{ alias: "openai", address: "jtk://dev/openai/key", note: "jtk://dev/openai/key", value_hash: "dd44ee55ff66" },
-		{ alias: "aws", address: "jtk://staging/aws/secret", note: "jtk://staging/aws/secret", value_hash: "77889900aabb" },
+		{ alias: "gh", address: "dogsout://dev/gh/pat", note: "dogsout://dev/gh/pat", value_hash: "aa11bb22cc33" },
+		{
+			alias: "openai",
+			address: "dogsout://dev/openai/key",
+			note: "dogsout://dev/openai/key",
+			value_hash: "dd44ee55ff66",
+		},
+		{
+			alias: "aws",
+			address: "dogsout://staging/aws/secret",
+			note: "dogsout://staging/aws/secret",
+			value_hash: "77889900aabb",
+		},
 	],
 	granted: [
 		{ alias: "hf", status: "剩 47m" },
@@ -48,7 +58,7 @@ const ASK = {
 	],
 };
 
-/** Exactly what apps/ask/helper/jtk-approve.swift --selftest prints (3 keys). */
+/** Exactly what the mygo helper (apps/ask) --selftest prints (3 keys). */
 const MOCKUP_DECISION = {
 	decision: "approve",
 	ttl: "10m",
@@ -56,7 +66,7 @@ const MOCKUP_DECISION = {
 	keys: { gh: "ttl", openai: "once", aws: "deny" },
 } as const;
 
-const home = mkdtempSync(join(tmpdir(), "jtk-drive-ui-"));
+const home = mkdtempSync(join(tmpdir(), "dogsout-drive-ui-"));
 const { db, sqlite } = openApiDb(":memory:");
 migrateApiDb(db);
 const stopWatch = watchHome(home, 100);
@@ -104,7 +114,7 @@ try {
 		headers: {
 			origin: "http://localhost:5173",
 			"access-control-request-method": "POST",
-			"access-control-request-headers": "content-type,x-jtk-assertion",
+			"access-control-request-headers": "content-type,x-dogsout-assertion",
 		},
 	});
 	const allowHeaders = preflight.headers.get("access-control-allow-headers") ?? "";
@@ -113,7 +123,7 @@ try {
 		"CORS preflight for the decision route succeeds",
 		String(preflight.status),
 	);
-	check(allowHeaders.includes("x-jtk-assertion"), "preflight permits the assertion header", allowHeaders);
+	check(allowHeaders.includes("x-dogsout-assertion"), "preflight permits the assertion header", allowHeaders);
 
 	const asker = fetch(`${base}/ask?budget_ms=8000`, {
 		method: "POST",
@@ -135,7 +145,7 @@ try {
 	const token = issueToken();
 	const decided = await fetch(`${base}/asks/${pending?.id}/decision`, {
 		method: "POST",
-		headers: { "content-type": "application/json", "x-jtk-assertion": token },
+		headers: { "content-type": "application/json", "x-dogsout-assertion": token },
 		body: JSON.stringify(MOCKUP_DECISION),
 	});
 	check(decided.status === 200, "POST decision is accepted", String(decided.status));
@@ -175,7 +185,7 @@ try {
 		{
 			principal: ASK.principal,
 			alias: "gh",
-			address: "jtk://dev/gh/pat",
+			address: "dogsout://dev/gh/pat",
 			valueHash: "aa11bb22cc33aa11bb22cc33aa11bb22cc33aa11bb22cc33aa11bb22cc33aa11",
 			ttl: "10m",
 			via: "webui",

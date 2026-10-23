@@ -40,8 +40,13 @@ describe("ask request contract", () => {
 			session: "sess_9f2ac31e",
 			at: "2026-10-09 21:14 EDT",
 			keys: [
-				{ alias: "gh", address: "jtk://dev/gh/pat", note: "github.com PAT · repo read", value_hash: "sha256:ab12cd34" },
-				{ alias: "openai", address: "jtk://dev/openai/api_key", note: "api.openai.com · env", value_hash: "" },
+				{
+					alias: "gh",
+					address: "dogsout://dev/gh/pat",
+					note: "github.com PAT · repo read",
+					value_hash: "sha256:ab12cd34",
+				},
+				{ alias: "openai", address: "dogsout://dev/openai/api_key", note: "api.openai.com · env", value_hash: "" },
 			],
 		};
 		const r = AskRequestSchema.safeParse(raw);

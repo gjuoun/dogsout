@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { GrantMeta } from "@jtk/type-contracts";
+import type { GrantMeta } from "@dogsout/type-contracts";
 import { grantUsable } from "../policy/evaluate.ts";
 import { consumeGrant, endSessionGrants, loadGrants, recordApproval, revokeByAlias } from "./grants.ts";
 import { closeSession, openSession, recordApprovals, takeReplay } from "./session.ts";
@@ -12,7 +12,7 @@ const NOW = new Date("2026-10-10T12:00:00.000Z");
 const SETTINGS = { always_decay: "720h" };
 
 beforeAll(() => {
-	home = mkdtempSync(join(tmpdir(), "jtk-sess-"));
+	home = mkdtempSync(join(tmpdir(), "dogsout-sess-"));
 });
 
 afterAll(() => {
@@ -23,7 +23,7 @@ describe("grants store", () => {
 	test("approval lands in a 0600 grants.json and is usable", async () => {
 		const g = await recordApproval(
 			home,
-			{ principal: "p1", alias: "gh", address: "jtk://dev/gh/pat", valueHash: "aa11", ttl: "1h", via: "swiftui" },
+			{ principal: "p1", alias: "gh", address: "dogsout://dev/gh/pat", valueHash: "aa11", ttl: "1h", via: "mygo" },
 			SETTINGS,
 			NOW,
 		);
@@ -38,7 +38,7 @@ describe("grants store", () => {
 	test("once grants are consumed on first use and refuse reuse", async () => {
 		const g = await recordApproval(
 			home,
-			{ principal: "p1", alias: "one", address: "jtk://dev/one/x", valueHash: "bb22", ttl: "once", via: "cli" },
+			{ principal: "p1", alias: "one", address: "dogsout://dev/one/x", valueHash: "bb22", ttl: "once", via: "cli" },
 			SETTINGS,
 			NOW,
 		);
@@ -56,7 +56,7 @@ describe("grants store", () => {
 	test("rotation invalidates regardless of remaining ttl", async () => {
 		const g = await recordApproval(
 			home,
-			{ principal: "p2", alias: "rot", address: "jtk://dev/rot/x", valueHash: "cc33", ttl: "24h", via: "swiftui" },
+			{ principal: "p2", alias: "rot", address: "dogsout://dev/rot/x", valueHash: "cc33", ttl: "24h", via: "mygo" },
 			SETTINGS,
 			NOW,
 		);
@@ -85,7 +85,7 @@ describe("session lifecycle", () => {
 			{
 				principal: "agent@x",
 				alias: "gh",
-				address: "jtk://dev/gh/pat",
+				address: "dogsout://dev/gh/pat",
 				valueHash: "aa11",
 				ttl: "session",
 				via: "manifest-invite",

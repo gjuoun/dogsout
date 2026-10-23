@@ -1,7 +1,7 @@
-import { digSubpath, loadConfig, openData, parseAddress, resolveToAddress } from "@jtk/core";
+import { digSubpath, loadConfig, openData, parseAddress, resolveToAddress } from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { fail, runJtk, withMeta } from "./cmd.ts";
+import { fail, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export async function readValue(name: string): Promise<Result<string, string>> {
@@ -27,7 +27,7 @@ export function getCommand() {
 			name: "get",
 			description: "read a value (masked digest by default; --reveal prints plaintext)",
 			args: {
-				name: positional({ type: string, displayName: "alias|jtk://vault/item/field" }),
+				name: positional({ type: string, displayName: "alias|dogsout://vault/item/field" }),
 				reveal: flag({ long: "reveal", description: "print the plaintext value to stdout" }),
 			},
 			handler: async ({ name, reveal }): Promise<Result<string, string>> => {
@@ -39,10 +39,10 @@ export function getCommand() {
 				return ok(`sha256:${hex} (${value.value.length} bytes, --reveal to show)`);
 			},
 		}),
-		{ reads: ["config", "vault"], writes: [], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: ["config", "vault"], writes: [], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runGet(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(getCommand(), argv);
+	return runDogsout<string>(getCommand(), argv);
 }

@@ -1,4 +1,4 @@
-import type { UiEvent } from "@jtk/type-contracts";
+import type { UiEvent } from "@dogsout/type-contracts";
 
 /** Fan-out to every open WebUI socket. A dead socket must never break the others. */
 type Listener = (event: UiEvent) => void;

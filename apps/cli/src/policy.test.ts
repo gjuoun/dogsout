@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { recordApproval, sha256Hex } from "@jtk/core";
+import { recordApproval, sha256Hex } from "@dogsout/core";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
 import { runGrants } from "./grants/grants.ts";
@@ -15,17 +15,17 @@ const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 let home = "";
 
 beforeAll(async () => {
-	home = mkdtempSync(join(tmpdir(), "jtk-pol-"));
-	process.env.JTK_HOME = home;
-	process.env.JTK_SE_HELPER = FAKE_SE;
+	home = mkdtempSync(join(tmpdir(), "dogsout-pol-"));
+	process.env.DOGSOUT_HOME = home;
+	process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
-	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-pol"));
-	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+	await runSet(["dogsout://dev/zai/api_key", "--stdin"], stdinOf("sk-pol"));
+	await runAlias(["ZAI_API_KEY", "dogsout://dev/zai/api_key"]);
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
-	delete process.env.JTK_SE_HELPER;
+	delete process.env.DOGSOUT_HOME;
+	delete process.env.DOGSOUT_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 
@@ -70,7 +70,7 @@ describe("policy simulate/why/test", () => {
 			{
 				principal: "cron@y",
 				alias: "ZAI_API_KEY",
-				address: "jtk://dev/zai/api_key",
+				address: "dogsout://dev/zai/api_key",
 				valueHash: await sha256Hex("sk-pol"),
 				ttl: "1h",
 				via: "cli",

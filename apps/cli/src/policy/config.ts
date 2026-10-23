@@ -1,10 +1,10 @@
-import { jtkHome, loadConfig, parseDuration, writeConfig } from "@jtk/core";
-import { PrincipalSchema, RuleSchema, SettingsSchema } from "@jtk/type-contracts";
+import { dogsoutHome, loadConfig, parseDuration, writeConfig } from "@dogsout/core";
+import { PrincipalSchema, RuleSchema, SettingsSchema } from "@dogsout/type-contracts";
 import { command, positional, string, subcommands } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 
 async function configShow(): Promise<Result<string, string>> {
-	const cfg = await loadConfig(jtkHome());
+	const cfg = await loadConfig(dogsoutHome());
 	if (cfg.isErr()) return err(cfg.error);
 	return ok(JSON.stringify(cfg.value, null, 2));
 }
@@ -17,11 +17,11 @@ const SETTABLE: Record<string, (v: string) => Result<string | undefined, string>
 async function configSetCore(a: { key: string; value: string }): Promise<Result<string, string>> {
 	const validate = SETTABLE[a.key];
 	if (!validate) {
-		return err("jtk policy config set <key> <value> — keys: " + Object.keys(SETTABLE).join(", "));
+		return err("dogsout policy config set <key> <value> — keys: " + Object.keys(SETTABLE).join(", "));
 	}
 	const checked = validate(a.value);
 	if (checked.isErr()) return err(a.key + ": " + checked.error);
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	cfg.value.settings = { ...(cfg.value.settings ?? SettingsSchema.parse({})), [a.key]: checked.value };
@@ -39,7 +39,7 @@ async function ruleAddCore(a: { json: string }): Promise<Result<string, string>>
 	}
 	const rule = RuleSchema.safeParse(parsed);
 	if (!rule.success) return err("invalid rule: " + rule.error.issues[0]?.message);
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const rules = cfg.value.rules ?? [];
@@ -52,7 +52,7 @@ async function ruleAddCore(a: { json: string }): Promise<Result<string, string>>
 }
 
 async function ruleRmCore(a: { id: string }): Promise<Result<string, string>> {
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const rules = cfg.value.rules ?? [];
@@ -73,7 +73,7 @@ async function principalAddCore(a: { json: string }): Promise<Result<string, str
 	}
 	const p = PrincipalSchema.safeParse(parsed);
 	if (!p.success) return err("invalid principal: " + p.error.issues[0]?.message);
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const principals = cfg.value.principals ?? [];
@@ -86,7 +86,7 @@ async function principalAddCore(a: { json: string }): Promise<Result<string, str
 }
 
 async function principalRmCore(a: { name: string }): Promise<Result<string, string>> {
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const cfg = await loadConfig(home);
 	if (cfg.isErr()) return err(cfg.error);
 	const principals = cfg.value.principals ?? [];

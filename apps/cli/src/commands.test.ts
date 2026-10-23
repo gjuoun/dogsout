@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JtkMeta } from "./cmd.ts";
+import type { DogsoutMeta } from "./cmd.ts";
 import { COMMANDS, SUBCOMMANDS } from "./commands.ts";
 
 const EXPECTED = [
@@ -10,6 +10,7 @@ const EXPECTED = [
 	"rm",
 	"alias",
 	"map",
+	"migrate",
 	"run",
 	"policy",
 	"grants",
@@ -18,7 +19,7 @@ const EXPECTED = [
 	"vault",
 ];
 
-const metaOf = (cmd: unknown): JtkMeta | undefined => (cmd as { meta?: JtkMeta }).meta;
+const metaOf = (cmd: unknown): DogsoutMeta | undefined => (cmd as { meta?: DogsoutMeta }).meta;
 const topicsOf = (cmd: unknown): Array<{ usage: string }> =>
 	typeof (cmd as { helpTopics?: unknown }).helpTopics === "function"
 		? ((cmd as { helpTopics: () => Array<{ usage: string }> }).helpTopics() as Array<{ usage: string }>)

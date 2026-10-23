@@ -1,7 +1,7 @@
 // `AskLogRow` is drizzle-derived and only exists in the generated client; the frame
 // shapes (and the read-only rows inside them) are the hand-written wire contract.
-import type { AskLogRow } from "@jtk/api-client";
-import type { GrantedRow, PendingAsk, SessionRow, UiEvent } from "@jtk/type-contracts";
+import type { AskLogRow } from "@dogsout/api-client";
+import type { GrantedRow, PendingAsk, SessionRow, UiEvent } from "@dogsout/type-contracts";
 
 /**
  * The activity panel is a pure fold over two inputs: the ask log (history) and the live

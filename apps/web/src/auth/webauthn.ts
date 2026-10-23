@@ -7,7 +7,7 @@ import { API_BASE } from "~/api/client";
  *
  * There is no password fallback by design: vault v2 has no master password, so a password
  * gate would be a weaker factor invented for the WebUI. No authenticator → no approval;
- * the page says so and points at the CLI/swiftui channels (PRD red line 4).
+ * the page says so and points at the CLI/mygo channels (PRD red line 4).
  */
 
 export interface AuthStatus {
@@ -74,7 +74,7 @@ export interface GateInput {
  * Returns the reason approval is disabled, or undefined when it is allowed.
  */
 export function approvalBlockedReason(input: GateInput): string | undefined {
-	if (!input.available) return "没有可用的平台认证器 — 用 CLI 或 swiftui 通道审批";
+	if (!input.available) return "没有可用的平台认证器 — 用 CLI 或 mygo 通道审批";
 	if (input.credentials === 0) return "这台设备还没有审批凭据 — 先注册（Touch ID / passkey）";
 	return undefined;
 }

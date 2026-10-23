@@ -12,7 +12,7 @@ function freshDb() {
 	return { db, sqlite };
 }
 
-const KEYS = [{ alias: "gh", address: "jtk://dev/gh/pat", note: "github.com PAT", value_hash: "aa11" }];
+const KEYS = [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "github.com PAT", value_hash: "aa11" }];
 
 describe("ask_log store", () => {
 	test("migration creates ask_log with the schema's columns", () => {
@@ -72,8 +72,8 @@ describe("ask_log store", () => {
 		expect(first).toBeGreaterThanOrEqual(2);
 	});
 
-	test("the on-disk store is 0600 and lives under JTK_API_DB", () => {
-		const dir = mkdtempSync(join(tmpdir(), "jtk-api-db-"));
+	test("the on-disk store is 0600 and lives under DOGSOUT_API_DB", () => {
+		const dir = mkdtempSync(join(tmpdir(), "dogsout-api-db-"));
 		const path = join(dir, "webui.db");
 		try {
 			const { db, sqlite } = openApiDb(path);

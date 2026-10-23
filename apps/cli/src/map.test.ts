@@ -14,21 +14,21 @@ const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 let home = "";
 
 beforeAll(async () => {
-	home = mkdtempSync(join(tmpdir(), "jtk-map-"));
-	process.env.JTK_HOME = home;
-	process.env.JTK_SE_HELPER = FAKE_SE;
+	home = mkdtempSync(join(tmpdir(), "dogsout-map-"));
+	process.env.DOGSOUT_HOME = home;
+	process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
-	await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-v1"));
-	await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+	await runSet(["dogsout://dev/zai/api_key", "--stdin"], stdinOf("sk-v1"));
+	await runAlias(["ZAI_API_KEY", "dogsout://dev/zai/api_key"]);
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
-	delete process.env.JTK_SE_HELPER;
+	delete process.env.DOGSOUT_HOME;
+	delete process.env.DOGSOUT_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 
-describe("jtk map + rotation follows the link", () => {
+describe("dogsout map + rotation follows the link", () => {
 	test("register, read through slot, rotate upstream, slot follows with zero propagation", async () => {
 		const set = await runMap(["zai", "ZAI_API_KEY"]);
 		expect(set.isOk()).toBe(true);
@@ -36,7 +36,7 @@ describe("jtk map + rotation follows the link", () => {
 		const before = await runGet(["zai", "--reveal"]);
 		expect(before.isOk() && before.value.startsWith("sk-v1")).toBe(true);
 
-		await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-v2-rotated"));
+		await runSet(["dogsout://dev/zai/api_key", "--stdin"], stdinOf("sk-v2-rotated"));
 		const after = await runGet(["zai", "--reveal"]);
 		expect(after.isOk() && after.value === "sk-v2-rotated").toBe(true);
 

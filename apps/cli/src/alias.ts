@@ -1,17 +1,17 @@
-import { loadConfig, parseAddress, writeConfig } from "@jtk/core";
+import { loadConfig, parseAddress, writeConfig } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { runJtk, withMeta } from "./cmd.ts";
+import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export function aliasCommand() {
 	return withMeta(
 		command({
 			name: "alias",
-			description: "register an alias for a jtk:// address in config.json",
+			description: "register an alias for a dogsout:// address in config.json",
 			args: {
 				name: positional({ type: string, displayName: "NAME" }),
-				addr: positional({ type: string, displayName: "jtk://vault/item/field" }),
+				addr: positional({ type: string, displayName: "dogsout://vault/item/field" }),
 			},
 			handler: async ({ name, addr }): Promise<Result<string, string>> => {
 				const parsed = parseAddress(addr);
@@ -26,10 +26,10 @@ export function aliasCommand() {
 				return ok(`${name} -> ${addr}`);
 			},
 		}),
-		{ reads: [], writes: ["config"], env: ["JTK_HOME"] },
+		{ reads: [], writes: ["config"], env: ["DOGSOUT_HOME"] },
 	);
 }
 
 export async function runAlias(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(aliasCommand(), argv);
+	return runDogsout<string>(aliasCommand(), argv);
 }

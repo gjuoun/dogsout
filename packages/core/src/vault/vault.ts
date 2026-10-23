@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { VaultFileV2 } from "@jtk/type-contracts";
+import type { VaultFileV2 } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /** File-level failures; crypto failures live in envelope.ts. */

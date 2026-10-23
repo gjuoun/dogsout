@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Opening manifest an agent runner hands to jtk (batch invite at session start). */
+/** Opening manifest an agent runner hands to dogsout (batch invite at session start). */
 export const SessionManifestSchema = z.object({
 	id: z.string().min(1),
 	principal: z.string().min(1),

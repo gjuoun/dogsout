@@ -1,21 +1,22 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { SeSlot, VaultFileV2 } from "@jtk/type-contracts";
+import type { SeSlot, VaultFileV2 } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import type { Ecdh, SeKeyRef } from "./envelope.ts";
 
 /**
- * Client for the Secure Enclave mode of the native helper (apps/ask jtk-approve):
+ * Client for the Secure Enclave helper (apps/ask dogsout-se, a Swift CLI with no UI):
  *   --se-create            → {blob, pub}        (no Touch ID)
  *   --se-ecdh  ← {blob, peer, reason} → {shared} (Touch ID / login password)
  *   --se-probe ← {blob}    → {usable}           (no UI: interactionNotAllowed)
  * JSON over stdin/stdout. Any non-zero exit, crash or garbage is an error — never a partial key.
  * A foreign or tampered blob can make CryptoKit trap, so each probe runs in its own process.
+ * The approval window is a separate helper (dogsout-approve, mygo in Go); this slot never asks it.
  */
-export const SE_HELPER_ENV = "JTK_SE_HELPER";
+export const SE_HELPER_ENV = "DOGSOUT_SE_HELPER";
 
 export function seHelperPath(): string {
-	return process.env[SE_HELPER_ENV] ?? join(homedir(), ".bun", "bin", "jtk-approve");
+	return process.env[SE_HELPER_ENV] ?? join(homedir(), ".bun", "bin", "dogsout-se");
 }
 
 const UNLOCK_BUDGET_MS = 120_000;
@@ -64,7 +65,11 @@ export async function seCreate(): Promise<Result<SeKeyRef, string>> {
 
 /** ECDH through the chip; this is where Touch ID is asked. */
 export const seEcdh: Ecdh = async (blob, ephPub) => {
-	const r = await callHelper("--se-ecdh", { blob, peer: ephPub, reason: "unlock your jtk vault" }, UNLOCK_BUDGET_MS);
+	const r = await callHelper(
+		"--se-ecdh",
+		{ blob, peer: ephPub, reason: "unlock your dogsout vault" },
+		UNLOCK_BUDGET_MS,
+	);
 	if (r.isErr()) return err(r.error);
 	const shared = (r.value as { shared?: unknown }).shared;
 	if (!isString(shared)) return err("--se-ecdh: bad response");

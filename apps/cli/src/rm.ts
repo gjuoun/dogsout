@@ -1,7 +1,7 @@
-import { nowIso, openData, parseAddress, saveData } from "@jtk/core";
+import { nowIso, openData, parseAddress, saveData } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { fail, runJtk, withMeta } from "./cmd.ts";
+import { fail, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export function rmCommand() {
@@ -9,7 +9,7 @@ export function rmCommand() {
 		command({
 			name: "rm",
 			description: "remove one field",
-			args: { addr: positional({ type: string, displayName: "jtk://vault/item/field" }) },
+			args: { addr: positional({ type: string, displayName: "dogsout://vault/item/field" }) },
 			handler: async ({ addr }): Promise<Result<string, string>> => {
 				const parsed = parseAddress(addr);
 				if (parsed.isErr()) return err(parsed.error);
@@ -28,10 +28,10 @@ export function rmCommand() {
 				return ok(`removed ${addr}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: [], writes: ["vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runRm(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(rmCommand(), argv);
+	return runDogsout<string>(rmCommand(), argv);
 }

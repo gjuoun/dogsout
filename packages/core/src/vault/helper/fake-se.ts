@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// TEST-ONLY fake of the Secure Enclave mode of jtk-approve (--se-create / --se-ecdh / --se-probe).
+// TEST-ONLY fake of the Secure Enclave mode of dogsout-approve (--se-create / --se-ecdh / --se-probe).
 // The "blob" here is the raw PKCS8 private key — NOT a chip-bound handle. Never use outside tests;
-// it is selected only through JTK_SE_HELPER. FAKE_SE_MODE=deny makes --se-ecdh exit 1 (cancelled Touch ID).
+// it is selected only through DOGSOUT_SE_HELPER. FAKE_SE_MODE=deny makes --se-ecdh exit 1 (cancelled Touch ID).
 export {};
 
 const P256 = { name: "ECDH", namedCurve: "P-256" } as const;

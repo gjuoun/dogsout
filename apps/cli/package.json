@@ -1,5 +1,5 @@
 {
-	"name": "junethekey",
+	"name": "dogsout",
 	"version": "0.0.2",
 	"private": true,
 	"type": "module",
@@ -7,19 +7,19 @@
 	"description": "The credential broker for AI agents",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/gjuoun/junethekey.git",
+		"url": "git+https://github.com/gjuoun/dogsout.git",
 		"directory": "apps/cli"
 	},
 	"bin": {
-		"jtk": "./src/main.ts"
+		"dogsout": "./src/main.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@jtk/type-contracts": "workspace:*",
-		"@jtk/core": "workspace:*",
+		"@dogsout/type-contracts": "workspace:*",
+		"@dogsout/core": "workspace:*",
 		"cmd-ts": "0.15.0",
 		"neverthrow": "^8.0.0"
 	},

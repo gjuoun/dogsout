@@ -1,5 +1,5 @@
 import { rmSync } from "node:fs";
-import { openData, rekeyV2, vaultBackupPath, vaultPath, writeVaultFile } from "@jtk/core";
+import { openData, rekeyV2, vaultBackupPath, vaultPath, writeVaultFile } from "@dogsout/core";
 import { command } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { ctxFromEnv } from "../context.ts";

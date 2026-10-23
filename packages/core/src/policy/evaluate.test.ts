@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { GrantMeta, Rule } from "@jtk/type-contracts";
+import type { GrantMeta, Rule } from "@dogsout/type-contracts";
 import { evaluate, grantUsable, lastMatchingRule } from "./evaluate.ts";
 
 const NOW = new Date("2026-10-10T12:00:00.000Z");
@@ -7,7 +7,7 @@ const base = {
 	principal: "claude-code@laptop",
 	groups: [] as string[],
 	alias: "gh",
-	address: "jtk://dev/gh/pat",
+	address: "dogsout://dev/gh/pat",
 	valueHash: "aa11",
 	defaultDecision: "ask" as const,
 	now: NOW,
@@ -24,10 +24,10 @@ const grant = (over: Partial<GrantMeta>): GrantMeta => ({
 	id: "g1",
 	principal: "claude-code@laptop",
 	alias: "gh",
-	address: "jtk://dev/gh/pat",
+	address: "dogsout://dev/gh/pat",
 	value_hash: "aa11",
 	ttl: "1h",
-	approved_via: "swiftui",
+	approved_via: "mygo",
 	approved_at: "2026-10-10T11:00:00.000Z",
 	expires_at: "2026-10-10T13:00:00.000Z",
 	consumed: false,
@@ -60,7 +60,7 @@ describe("rule matching (last-match-wins)", () => {
 	});
 
 	test("resource glob hits alias or full address", () => {
-		const rules = [rule({ id: "vault", resource: "jtk://dev/gh/*" })];
+		const rules = [rule({ id: "vault", resource: "dogsout://dev/gh/*" })];
 		expect(lastMatchingRule(rules, base)?.id).toBe("vault");
 	});
 });

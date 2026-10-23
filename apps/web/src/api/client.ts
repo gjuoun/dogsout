@@ -1,4 +1,4 @@
-import { configureApi } from "@jtk/api-client";
+import { configureApi } from "@dogsout/api-client";
 
 /**
  * The broker API. Loopback by default; the WebUI is a local surface (no tailnet exposure

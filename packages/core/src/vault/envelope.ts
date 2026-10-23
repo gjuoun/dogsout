@@ -5,7 +5,7 @@ import {
 	type Slot,
 	type VaultData,
 	type VaultFileV2,
-} from "@jtk/type-contracts";
+} from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /**
@@ -44,6 +44,12 @@ function randomB64url(n: number): string {
 	return Buffer.from(crypto.getRandomValues(new Uint8Array(n))).toString("base64url");
 }
 
+/**
+ * FROZEN WIRE CONSTANTS — MUST NOT CHANGE. These strings are AEAD associated data and HKDF
+ * info, not branding: every `jtk/…` literal here is baked into vaults already on disk, so
+ * renaming one makes each existing envelope fail its GCM authentication ("corrupt") and
+ * would require a vault v3 migration. They keep the pre-rename spelling on purpose.
+ */
 const dataAad = (vaultId: string) => enc.encode(`jtk/data/v2|${vaultId}`);
 const slotAad = (kind: Slot["kind"], vaultId: string, slotId: string) =>
 	enc.encode(`jtk/slot/${kind}|${vaultId}|${slotId}`);

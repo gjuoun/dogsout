@@ -1,9 +1,9 @@
-import type { AskRequest, Decision, PendingAsk } from "@jtk/api-client";
+import type { AskRequest, Decision, PendingAsk } from "@dogsout/api-client";
 
 /**
  * The decision area's whole semantics, as pure functions — the mockup's rules, nothing else.
- * Source of truth for wording/labels: apps/ask/mockups/jtk-approve.swift and
- * apps/ask/helper/jtk-approve.swift (whose --selftest literal is the parity target).
+ * Source of truth for wording/labels: apps/ask/mockups/jtk-approve.swift (the design
+ * mockup) and the mygo helper in apps/ask (whose --selftest literal is the parity target).
  */
 
 /** Six UI tiers; `session` is never offered in the picker (it is a manifest tier). */

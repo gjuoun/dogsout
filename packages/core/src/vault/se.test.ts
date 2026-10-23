@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import type { SeSlot } from "@jtk/type-contracts";
+import type { SeSlot } from "@dogsout/type-contracts";
 import { createEnvelopeV2, openDataV2, unlockWithSe } from "./envelope.ts";
-import { pickLocalSeSlot, SE_HELPER_ENV, seCreate, seEcdh, seProbe } from "./se.ts";
+import { pickLocalSeSlot, SE_HELPER_ENV, seCreate, seEcdh, seHelperPath, seProbe } from "./se.ts";
 
 const FAKE = join(import.meta.dir, "helper", "fake-se.ts");
 const prev = process.env[SE_HELPER_ENV];
@@ -53,9 +53,20 @@ describe("SE helper client (fake helper binary)", () => {
 	});
 
 	test("a missing helper binary is an error", async () => {
-		process.env[SE_HELPER_ENV] = "/nonexistent/jtk-approve";
+		process.env[SE_HELPER_ENV] = "/nonexistent/dogsout-se";
 		try {
 			expect((await seCreate()).isErr()).toBe(true);
+		} finally {
+			process.env[SE_HELPER_ENV] = FAKE;
+		}
+	});
+});
+
+describe("SE helper path", () => {
+	test("defaults to ~/.bun/bin/dogsout-se (the SE slot, not the approval window)", () => {
+		delete process.env[SE_HELPER_ENV];
+		try {
+			expect(seHelperPath()).toEndWith(join(".bun", "bin", "dogsout-se"));
 		} finally {
 			process.env[SE_HELPER_ENV] = FAKE;
 		}

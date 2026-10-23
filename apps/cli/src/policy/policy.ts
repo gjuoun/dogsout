@@ -1,6 +1,6 @@
 import { subcommands } from "cmd-ts";
 import type { Result } from "neverthrow";
-import { runJtk, withMeta } from "../cmd.ts";
+import { runDogsout, withMeta } from "../cmd.ts";
 import { configCommand } from "./config.ts";
 import { simulateCommand } from "./simulate.ts";
 import { policyTestCommand } from "./test.ts";
@@ -18,10 +18,14 @@ export function policyCommand() {
 				config: configCommand(),
 			},
 		}),
-		{ reads: ["vault", "config", "grants", "sessions"], writes: ["config"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{
+			reads: ["vault", "config", "grants", "sessions"],
+			writes: ["config"],
+			env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"],
+		},
 	);
 }
 
 export async function runPolicy(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(policyCommand(), argv);
+	return runDogsout<string>(policyCommand(), argv);
 }

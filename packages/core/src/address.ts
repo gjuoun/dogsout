@@ -7,12 +7,12 @@ export interface ParsedAddress {
 	subpath: string[];
 }
 
-/** jtk://<vault>/<item>/<field>[.sub.path] — first dot-segment is the field, the rest digs into JSON values. */
+/** dogsout://<vault>/<item>/<field>[.sub.path] — first dot-segment is the field, the rest digs into JSON values. */
 export function parseAddress(input: string): Result<ParsedAddress, string> {
-	if (!input.startsWith("jtk://")) return err(`not a jtk:// address: ${input}`);
-	const rest = input.slice("jtk://".length);
+	if (!input.startsWith("dogsout://")) return err(`not a dogsout:// address: ${input}`);
+	const rest = input.slice("dogsout://".length);
 	const parts = rest.split("/").filter((s) => s.length > 0);
-	if (parts.length !== 3) return err("address must be jtk://<vault>/<item>/<field>[.sub.path]");
+	if (parts.length !== 3) return err("address must be dogsout://<vault>/<item>/<field>[.sub.path]");
 	const [vault, item, tail] = parts as [string, string, string];
 	const segs = tail.split(".").filter((s) => s.length > 0);
 	if (segs.length === 0) return err("field part is empty");
@@ -23,23 +23,23 @@ export function parseAddress(input: string): Result<ParsedAddress, string> {
 
 export function formatAddress(a: ParsedAddress): string {
 	const tail = [a.field, ...a.subpath].join(".");
-	return `jtk://${a.vault}/${a.item}/${tail}`;
+	return `dogsout://${a.vault}/${a.item}/${tail}`;
 }
 
-/** Item-level address jtk://<vault>/<item> — used by --from spreading. */
+/** Item-level address dogsout://<vault>/<item> — used by --from spreading. */
 export function parseItemRef(input: string): Result<{ vault: string; item: string }, string> {
-	if (!input.startsWith("jtk://")) return err(`not a jtk:// address: ${input}`);
+	if (!input.startsWith("dogsout://")) return err(`not a dogsout:// address: ${input}`);
 	const parts = input
-		.slice("jtk://".length)
+		.slice("dogsout://".length)
 		.split("/")
 		.filter((s) => s.length > 0);
-	if (parts.length !== 2) return err("item address must be jtk://<vault>/<item>");
+	if (parts.length !== 2) return err("item address must be dogsout://<vault>/<item>");
 	return ok({ vault: parts[0] as string, item: parts[1] as string });
 }
 
-/** Resolve a name that may be an alias (config) or a literal jtk:// address. */
+/** Resolve a name that may be an alias (config) or a literal dogsout:// address. */
 export function resolveName(name: string, aliases: Record<string, string>): Result<string, string> {
-	if (name.startsWith("jtk://")) return ok(name);
+	if (name.startsWith("dogsout://")) return ok(name);
 	const hit = aliases[name];
 	return hit ? ok(hit) : err(`unknown alias and not an address: ${name}`);
 }

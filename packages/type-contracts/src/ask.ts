@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * AskChannel contract (PRD §3) — the single JSON shape every approval channel
  * consumes and emits. Formalized from the validated mockup (apps/ask/mockups/jtk-approve.swift,
- * PR #4); the helper's --selftest literals are the reference fixtures.
+ * PR #4); the mygo helper's (apps/ask) --selftest literals are the reference fixtures.
  *
  * This is the WIRE half of the approval protocol: these schemas are what crosses a
  * process boundary (apps/ask writes and reads exactly this JSON). The IN-PROCESS half
@@ -41,7 +41,7 @@ export const GrantedRowSchema = z.object({
 });
 export type GrantedRow = z.infer<typeof GrantedRowSchema>;
 
-/** What jtk writes for the channel to render (mockup AskRequest). */
+/** What dogsout writes for the channel to render (mockup AskRequest). */
 export const AskRequestSchema = z.object({
 	principal: z.string().min(1),
 	session: z.string().min(1),

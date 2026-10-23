@@ -4,7 +4,7 @@ import { grantEvent, sessionEvent } from "./events/snapshot.ts";
 
 /**
  * The CLI writes grants/sessions behind the API's back (`grants rm`, session end, run
- * approvals). Watching JTK_HOME is how the panel stays honest without a daemon rewrite.
+ * approvals). Watching DOGSOUT_HOME is how the panel stays honest without a daemon rewrite.
  *
  * `fs.watch` may report a null filename, and core writes atomically (tmp + rename), so
  * one logical write can fire two events. Both are handled the same way: debounce, then

@@ -1,18 +1,18 @@
-import { jtkHome, listVaultBackups, readVaultRaw, seProbe, V1_UNSUPPORTED, vaultPath } from "@jtk/core";
-import { parseVaultFileV2, vaultFileVersion } from "@jtk/type-contracts";
+import { dogsoutHome, listVaultBackups, readVaultRaw, seProbe, V1_UNSUPPORTED, vaultPath } from "@dogsout/core";
+import { parseVaultFileV2, vaultFileVersion } from "@dogsout/type-contracts";
 import { command } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 
 /** Read-only overview: never unlocks, never shows Touch ID (slot metadata is plaintext by design). */
 async function statusCore(): Promise<Result<string, string>> {
-	const home = jtkHome();
+	const home = dogsoutHome();
 	const backups = listVaultBackups(home);
 	const backupLine = `backups: ${backups.length}${backups.length > 0 ? ` (${backups.map((n) => `vault.enc.bak.${n}`).join(", ")})` : ""}`;
 	const raw = await readVaultRaw(vaultPath(home));
 	if (raw.isErr()) {
 		if (raw.error.kind === "corrupt")
-			return err(`vault.enc unreadable\n${backupLine}${backups.length > 0 ? "\nrun: jtk vault restore" : ""}`);
-		return err(`vault not found: ${vaultPath(home)} — run: jtk init`);
+			return err(`vault.enc unreadable\n${backupLine}${backups.length > 0 ? "\nrun: dogsout vault restore" : ""}`);
+		return err(`vault not found: ${vaultPath(home)} — run: dogsout init`);
 	}
 	const version = vaultFileVersion(raw.value);
 	if (version === 1) return err(V1_UNSUPPORTED);

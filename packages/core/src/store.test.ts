@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { VaultData, VaultFileV2 } from "@jtk/type-contracts";
+import type { VaultData, VaultFileV2 } from "@dogsout/type-contracts";
 import { vaultPath } from "./paths.ts";
 import { initFiles, openData, saveData, V1_UNSUPPORTED } from "./store.ts";
 import { createEnvelopeV2 } from "./vault/envelope.ts";
@@ -25,7 +25,7 @@ const data = (): VaultData => ({
 });
 
 async function v2Home(): Promise<{ home: string; file: VaultFileV2 }> {
-	const home = mkdtempSync(join(tmpdir(), "jtk-store-v2-"));
+	const home = mkdtempSync(join(tmpdir(), "dogsout-store-v2-"));
 	const { file } = await createEnvelopeV2(data(), (await seCreate())._unsafeUnwrap());
 	await writeVaultFile(vaultPath(home), file);
 	return { home, file };
@@ -74,7 +74,7 @@ describe("store: version-dispatching open/save", () => {
 		}
 	});
 
-	test("unreadable vault.enc names the backup and jtk vault restore, never substitutes silently", async () => {
+	test("unreadable vault.enc names the backup and dogsout vault restore, never substitutes silently", async () => {
 		const { home } = await v2Home();
 		try {
 			const { envelope, data: d } = (await openData({ home }))._unsafeUnwrap();
@@ -82,14 +82,14 @@ describe("store: version-dispatching open/save", () => {
 			writeFileSync(vaultPath(home), "{ not json");
 			const r = await openData({ home });
 			expect(r.isErr()).toBe(true);
-			expect(r._unsafeUnwrapErr()).toContain("jtk vault restore");
+			expect(r._unsafeUnwrapErr()).toContain("dogsout vault restore");
 		} finally {
 			rmSync(home, { recursive: true, force: true });
 		}
 	});
 
 	test("initFiles creates config + a v2 vault that opens through the se slot", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-store-init-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-"));
 		try {
 			const r = await initFiles(home);
 			expect(r._unsafeUnwrap().fingerprint).toMatch(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
@@ -101,7 +101,7 @@ describe("store: version-dispatching open/save", () => {
 	});
 
 	test("a v1 (password) vault file is refused — cold cut, no reader", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-store-v1-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-store-v1-"));
 		try {
 			writeFileSync(
 				vaultPath(home),
@@ -114,7 +114,7 @@ describe("store: version-dispatching open/save", () => {
 	});
 
 	test("init aborts and cleans up when the new slot cannot be unlocked", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-store-init-deny-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-deny-"));
 		process.env.FAKE_SE_MODE = "deny";
 		try {
 			const r = await initFiles(home);

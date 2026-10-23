@@ -1,14 +1,14 @@
-import { loadConfig, nowIso, openData, parseEnvFile, saveData, writeConfig } from "@jtk/core";
+import { loadConfig, nowIso, openData, parseEnvFile, saveData, writeConfig } from "@dogsout/core";
 import { command, option, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { runJtk, withMeta } from "./cmd.ts";
+import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export function importEnvCommand() {
 	return withMeta(
 		command({
 			name: "import-env",
-			description: "import a .env file: literal values into the vault, jtk:// refs become aliases",
+			description: "import a .env file: literal values into the vault, dogsout:// refs become aliases",
 			args: {
 				file: positional({ type: string, displayName: "file.env" }),
 				vault: option({
@@ -32,6 +32,12 @@ export function importEnvCommand() {
 					return err(`cannot read: ${file}`);
 				}
 				const plan = parseEnvFile(text);
+				if (plan.legacy.length > 0) {
+					const first = plan.legacy[0] as { key: string; value: string };
+					return err(
+						`${first.key} uses the retired jtk:// scheme — rewrite it as dogsout:// (run: dogsout migrate for stored aliases)`,
+					);
+				}
 
 				const ctxR = ctxFromEnv();
 				if (ctxR.isErr()) return err(ctxR.error);
@@ -61,10 +67,10 @@ export function importEnvCommand() {
 				return ok(`imported ${plan.directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
 			},
 		}),
-		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runImportEnv(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(importEnvCommand(), argv);
+	return runDogsout<string>(importEnvCommand(), argv);
 }

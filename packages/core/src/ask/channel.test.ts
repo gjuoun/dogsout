@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AskRequest } from "@jtk/type-contracts";
+import type { AskRequest } from "@dogsout/type-contracts";
 import { err, ok } from "neverthrow";
 import { type Channel, runAskChain } from "./channel.ts";
 
@@ -7,7 +7,7 @@ const req: AskRequest = {
 	principal: "p",
 	session: "s",
 	at: "t",
-	keys: [{ alias: "gh", address: "jtk://dev/gh/pat", note: "", value_hash: "aa" }],
+	keys: [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "", value_hash: "aa" }],
 	granted: [],
 };
 

@@ -1,5 +1,5 @@
+import { AskRequestSchema, DecisionSchema, PendingAskSchema } from "@dogsout/type-contracts";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { AskRequestSchema, DecisionSchema, PendingAskSchema } from "@jtk/type-contracts";
 import { createSelectSchema } from "drizzle-zod";
 // Plain zod, not @hono/zod-openapi's `z` re-export: that re-export shadows the ZodType
 // type binding, so schemas built from it are rejected by createRoute's schema type.
@@ -28,7 +28,7 @@ export const ErrorBody = z.object({ error: z.string() }).meta({ id: "ErrorBody" 
 export const OPENAPI_INFO = {
 	openapi: "3.1.0",
 	info: {
-		title: "junethekey",
+		title: "dogsout",
 		version: "0.1.0",
 		description: "credential broker for agents — ask + approval surface (F3 preview)",
 	},

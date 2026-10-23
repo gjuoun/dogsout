@@ -1,16 +1,16 @@
-import { formatAddress, nowIso, openData, parseAddress, saveData } from "@jtk/core";
+import { formatAddress, nowIso, openData, parseAddress, saveData } from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import { defaultIo, fail, type Io, runJtk, withMeta } from "./cmd.ts";
+import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
 export function setCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "set",
-			description: "store a secret from stdin at a jtk:// address",
+			description: "store a secret from stdin at a dogsout:// address",
 			args: {
-				addr: positional({ type: string, displayName: "jtk://vault/item/field" }),
+				addr: positional({ type: string, displayName: "dogsout://vault/item/field" }),
 				stdin: flag({ long: "stdin", description: "value is read from stdin (default behavior)" }),
 			},
 			handler: async ({ addr }): Promise<Result<string, string>> => {
@@ -34,10 +34,10 @@ export function setCommand(io: Io = defaultIo) {
 				return ok(`set ${formatAddress(parsed.value)}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: [], writes: ["vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runSet(argv: string[], io: Io = defaultIo): Promise<Result<string, string>> {
-	return runJtk<string>(setCommand(io), argv);
+	return runDogsout<string>(setCommand(io), argv);
 }

@@ -1,5 +1,5 @@
-import type { AskRequest, PendingAsk } from "@jtk/api-client";
-import { getAsks, postAsksByIdDecision } from "@jtk/api-client";
+import type { AskRequest, PendingAsk } from "@dogsout/api-client";
+import { getAsks, postAsksByIdDecision } from "@dogsout/api-client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { ApprovalPanel } from "~/approval/ApprovalPanel";
@@ -99,7 +99,7 @@ function ApprovePage() {
 			const { error } = await postAsksByIdDecision({
 				path: { id: pending.id },
 				body: decision,
-				...(token === undefined ? {} : { headers: { "x-jtk-assertion": token } }),
+				...(token === undefined ? {} : { headers: { "x-dogsout-assertion": token } }),
 			});
 			if (error) setNotice(typeof error === "string" ? error : JSON.stringify(error));
 			else setPending(undefined);

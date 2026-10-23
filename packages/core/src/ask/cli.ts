@@ -5,7 +5,7 @@ import {
 	TTL_UI_TIERS,
 	type TtlTier,
 	TtlTierSchema,
-} from "@jtk/type-contracts";
+} from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 import type { Channel } from "./channel.ts";
 
@@ -27,7 +27,7 @@ export const cliChannel: Channel = {
 		const { createInterface } = await import("node:readline");
 		const rl = createInterface({ input: process.stdin, output: process.stdout });
 		try {
-			console.log("jtk approval — principal " + request.principal + " (session " + request.session + ")");
+			console.log("dogsout approval — principal " + request.principal + " (session " + request.session + ")");
 			const keys: Record<string, "deny" | "once" | "ttl"> = {};
 			for (const k of request.keys) {
 				const a = await question(rl, "  " + k.alias + " (" + k.note + ") approve? [y=ttl n=deny o=once] ");

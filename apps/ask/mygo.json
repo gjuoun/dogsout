@@ -1,0 +1,6 @@
+{
+	"name": "dogsout-approve",
+	"identifier": "com.dogsout.approve",
+	"version": "0.0.2",
+	"out": "build"
+}

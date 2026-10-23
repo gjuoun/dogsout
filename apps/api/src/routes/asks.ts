@@ -1,5 +1,5 @@
+import type { Decision } from "@dogsout/type-contracts";
 import { createRoute, type OpenAPIHono } from "@hono/zod-openapi";
-import type { Decision } from "@jtk/type-contracts";
 import { z } from "zod";
 import type { ApiDb } from "../db/client.ts";
 import { decideAsk, listRecent } from "../db/store.ts";

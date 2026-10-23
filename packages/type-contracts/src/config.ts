@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-/** jtk://<vault>/<item>/<field>[.json.path] — F1 subset: no ?jq=, no glob in stored aliases. */
+/** dogsout://<vault>/<item>/<field>[.json.path] — F1 subset: no ?jq=, no glob in stored aliases. */
 export const AddressSchema = z
 	.string()
-	.regex(/^jtk:\/\/[^/\s]+\/[^/\s]+\/[^/\s]+(\.[^/\s]+)*$/, "must be jtk://<vault>/<item>/<field>[.json.path]");
+	.regex(/^dogsout:\/\/[^/\s]+\/[^/\s]+\/[^/\s]+(\.[^/\s]+)*$/, "must be dogsout://<vault>/<item>/<field>[.json.path]");
 export type Address = z.infer<typeof AddressSchema>;
 
 /** Settings skeleton — every knob the spec defines; F1 CLI only consumes defaults. */

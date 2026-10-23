@@ -5,7 +5,7 @@ const ASK = {
 	principal: "claude-code@laptop",
 	session: "sess_9f2ac31e",
 	at: "2026-10-09T21:14:00Z",
-	keys: [{ alias: "gh", address: "jtk://dev/gh/pat", note: "github.com PAT · repo read", value_hash: "aa11" }],
+	keys: [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "github.com PAT · repo read", value_hash: "aa11" }],
 	granted: [{ alias: "hf", status: "剩 47m" }],
 };
 

@@ -1,4 +1,4 @@
-import { type AskRequest, type Decision, parseDecision } from "@jtk/type-contracts";
+import { type AskRequest, type Decision, parseDecision } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /**
@@ -8,7 +8,7 @@ import { err, ok, type Result } from "neverthrow";
  * consumes it and adds no shape of its own.
  */
 
-/** One approval outlet in the degradation chain (webui -> swiftui -> cli -> deny). */
+/** One approval outlet in the degradation chain (webui -> mygo -> cli -> deny). */
 export interface Channel {
 	name: string;
 	/** False = slot empty on this machine; the chain skips it without penalty. */

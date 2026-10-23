@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Test fake of the swiftui helper: reads --request <path>, approves every key under a ttl.
+// Test fake of the mygo helper: reads --request <path>, approves every key under a ttl.
 export {};
 
 const args = process.argv;

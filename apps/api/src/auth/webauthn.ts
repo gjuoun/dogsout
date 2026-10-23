@@ -17,23 +17,25 @@ import { webauthnCred } from "../db/schema.ts";
  * unknown credential or a bad signature all end in "no approval". There is deliberately
  * **no password fallback**: vault v2 has no master password, so a password gate would be a
  * weaker factor invented out of nothing. The UI disables approval and points at the
- * CLI/swiftui channels instead.
+ * CLI/mygo channels instead.
  */
 
 export interface AuthConfig {
 	/** WebAuthn RP ID = the host the page is served from. `localhost` covers any port. */
 	rpID: string;
 	rpName: string;
-	/** Origins allowed to complete the ceremony (comma-separated `JTK_WEB_ORIGIN`). */
+	/** Origins allowed to complete the ceremony (comma-separated `DOGSOUT_WEB_ORIGIN`). */
 	origins: string[];
 }
 
 export function authConfig(): AuthConfig {
-	const origins = (process.env.JTK_WEB_ORIGIN ?? "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173")
+	const origins = (
+		process.env.DOGSOUT_WEB_ORIGIN ?? "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+	)
 		.split(",")
 		.map((o) => o.trim())
 		.filter((o) => o.length > 0);
-	return { rpID: process.env.JTK_WEBAUTHN_RP_ID ?? "localhost", rpName: "junethekey", origins };
+	return { rpID: process.env.DOGSOUT_WEBAUTHN_RP_ID ?? "localhost", rpName: "dogsout", origins };
 }
 
 interface Challenge {
@@ -90,8 +92,8 @@ export async function registrationOptions(db: ApiDb): Promise<{ options: unknown
 	const options = await generateRegistrationOptions({
 		rpName: authConfig().rpName,
 		rpID: authConfig().rpID,
-		userName: "jtk-local",
-		userDisplayName: "junethekey (local)",
+		userName: "dogsout-local",
+		userDisplayName: "dogsout (local)",
 		attestationType: "none",
 		excludeCredentials: existing,
 		authenticatorSelection: {

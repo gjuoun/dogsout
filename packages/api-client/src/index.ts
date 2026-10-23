@@ -1,6 +1,6 @@
 /**
  * The only API surface the WebUI imports. Everything here is generated from
- * `apps/api/openapi.json` — no server code, no drizzle, no `@jtk/core`.
+ * `apps/api/openapi.json` — no server code, no drizzle, no `@dogsout/core`.
  */
 
 export { client } from "./generated/client.gen.ts";

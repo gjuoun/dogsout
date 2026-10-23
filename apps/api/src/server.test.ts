@@ -25,7 +25,7 @@ const REQ = {
 	principal: "agent@laptop",
 	session: "sess_1",
 	at: "2026-10-10T00:00:00Z",
-	keys: [{ alias: "gh", address: "jtk://dev/gh/pat", note: "", value_hash: "aa" }],
+	keys: [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "", value_hash: "aa" }],
 	granted: [],
 };
 

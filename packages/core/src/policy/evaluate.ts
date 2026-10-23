@@ -1,4 +1,4 @@
-import type { GrantMeta, Rule } from "@jtk/type-contracts";
+import type { GrantMeta, Rule } from "@dogsout/type-contracts";
 
 /** A policy verdict: what to do, which record decided it, and why (human-readable). */
 export interface Verdict {

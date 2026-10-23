@@ -1,6 +1,6 @@
 import { subcommands } from "cmd-ts";
 import type { Result } from "neverthrow";
-import { runJtk, withMeta } from "../cmd.ts";
+import { runDogsout, withMeta } from "../cmd.ts";
 import { vaultRekeyCommand } from "./rekey.ts";
 import { vaultRestoreCommand } from "./restore.ts";
 import { vaultSlotRmCommand } from "./slot-rm.ts";
@@ -22,10 +22,10 @@ export function vaultCommand() {
 				slot: vaultSlotCommand(),
 			},
 		}),
-		{ reads: ["vault"], writes: ["vault"], env: ["JTK_HOME", "JTK_SE_HELPER"] },
+		{ reads: ["vault"], writes: ["vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
 export async function runVault(argv: string[]): Promise<Result<string, string>> {
-	return runJtk<string>(vaultCommand(), argv);
+	return runDogsout<string>(vaultCommand(), argv);
 }

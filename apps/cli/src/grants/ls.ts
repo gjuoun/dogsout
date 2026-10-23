@@ -1,12 +1,12 @@
-import { jtkHome, loadGrants } from "@jtk/core";
+import { dogsoutHome, loadGrants } from "@dogsout/core";
 import { command, option, optional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { activeSessionIds } from "../context.ts";
 
 async function grantsLsCore(a: { principal?: string | undefined }): Promise<Result<string, string>> {
-	const file = await loadGrants(jtkHome());
+	const file = await loadGrants(dogsoutHome());
 	if (file.isErr()) return err(file.error);
-	const active = await activeSessionIds(jtkHome());
+	const active = await activeSessionIds(dogsoutHome());
 	const now = new Date();
 	const rows = file.value.grants
 		.filter((g) => (a.principal ? g.principal === a.principal : true))

@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 
 /**
  * The generated artifacts are the *only* thing the browser imports from this package's
- * chain. If a generator ever emits a server import (drizzle, bun:sqlite, @jtk/core), the
+ * chain. If a generator ever emits a server import (drizzle, bun:sqlite, @dogsout/core), the
  * client bundle would start failing or — worse — silently grow a server dependency.
  * This test is the structural gate the plan calls "bundle has zero server imports";
  * the built-asset scan (`bun run check:bundle`) covers the other half.
@@ -18,9 +18,9 @@ const FORBIDDEN = [
 	/^drizzle-zod/,
 	/^bun:/,
 	/^node:/,
-	/^@jtk\/core$/,
-	/^@jtk\/api$/,
-	/^@jtk\/type-contracts$/,
+	/^@dogsout\/core$/,
+	/^@dogsout\/api$/,
+	/^@dogsout\/type-contracts$/,
 ];
 
 function walk(dir: string, base = dir): string[] {

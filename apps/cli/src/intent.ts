@@ -1,6 +1,6 @@
-// junethekey feature map — intent layer (the only hand-written part of the map).
+// dogsout feature map — intent layer (the only hand-written part of the map).
 // Structure (commands/flags/meta) is exported by ./commands.ts and read live by the
-// `jtkmap` query tool (kept locally, outside this repo). This file answers "why" and
+// feature-map query tool (kept locally, outside this repo). This file answers "why" and
 // "what must not break". Only existing functionality is described here.
 // Types are self-contained on purpose: the repo must not depend on local tooling.
 
@@ -47,17 +47,17 @@ export const featureMap: FeatureMap = {
 	commands: {
 		init: {
 			tier: "stable",
-			does: "create vault.enc + config.json in JTK_HOME — no password: mints a Secure Enclave key, seals an empty vault, unlocks once (Touch ID) before reporting success",
+			does: "create vault.enc + config.json in DOGSOUT_HOME — no password: mints a Secure Enclave key, seals an empty vault, unlocks once (Touch ID) before reporting success",
 			gotchas: [
-				"--force replaces config AND vault — tests must use temporary JTK_HOME only",
-				"needs the native helper (apps/ask/build.sh → ~/.bun/bin/jtk-approve, or JTK_SE_HELPER); tests point JTK_SE_HELPER at the fake",
+				"--force replaces config AND vault — tests must use temporary DOGSOUT_HOME only",
+				"needs the native helpers (apps/ask/build.sh → ~/.bun/bin/dogsout-se, or DOGSOUT_SE_HELPER); tests point DOGSOUT_SE_HELPER at the fake",
 				"one unlock factor only (this Mac's Touch ID) until WebUI passkey enrollment (F3)",
 			],
 			legacyFlags: { force: "init-guard" },
 		},
 		set: {
 			tier: "stable",
-			does: "store a value from stdin at a jtk:// address; vault/item are auto-created",
+			does: "store a value from stdin at a dogsout:// address; vault/item are auto-created",
 			plaintext: "value arrives via stdin, never as a CLI argument",
 			gotchas: [
 				"--stdin is declared but optional — the value ALWAYS comes from stdin",
@@ -86,7 +86,7 @@ export const featureMap: FeatureMap = {
 		},
 		alias: {
 			tier: "stable",
-			does: "register NAME -> jtk:// address in config.json; rotation follows automatically",
+			does: "register NAME -> dogsout:// address in config.json; rotation follows automatically",
 			gotchas: [
 				"overlaps with `map` — the foundation spec wanted alias to be the soft link; merge is decided, not done yet",
 			],
@@ -100,6 +100,16 @@ export const featureMap: FeatureMap = {
 			],
 			legacyKeys: ["vault-link"],
 		},
+		migrate: {
+			tier: "stable",
+			does: "one-time rename migration: rewrite stored jtk:// addresses to dogsout:// and move the storage dir to ~/.config/dogsout",
+			gotchas: [
+				"--dry-run prints the plan and writes nothing; a second run reports zero rewrites and touches no file",
+				"never decrypts the vault: vault.enc stays byte-identical and every value_hash is copied verbatim",
+				"every other command refuses to start while a populated ~/.config/junethekey exists and ~/.config/dogsout does not",
+			],
+			legacyKeys: ["storage-migration-idempotent"],
+		},
 		run: {
 			tier: "stable",
 			does: "resolve aliases/refs and inject them into a child process environment",
@@ -108,14 +118,14 @@ export const featureMap: FeatureMap = {
 			gotchas: [
 				"cmd-ts rest() keeps the leading -- token; the handler strips it",
 				"--from-item is rejected with loud guidance (item spread was removed)",
-				"exit code = child exit code; jtk failures exit 1 before spawning",
+				"exit code = child exit code; dogsout failures exit 1 before spawning",
 			],
 			legacyFlags: { env: "run-env", "from-env": "run-fromenv" },
 			legacyKeys: ["run-exitcode", "run-noleak"],
 		},
 		"import-env": {
 			tier: "stable",
-			does: "import a .env file: literals into the vault, jtk:// refs become aliases, op:// skipped",
+			does: "import a .env file: literals into the vault, dogsout:// refs become aliases, op:// skipped",
 			legacyKeys: ["io-importenv"],
 		},
 		export: {
@@ -187,15 +197,21 @@ export const featureMap: FeatureMap = {
 			appliesTo: ["get", "run", "set", "ls", "rm", "vault"],
 		},
 		{
+			id: "storage-migration-idempotent",
+			statement:
+				"the rename migration rewrites addresses only: it never opens the vault, keeps every value_hash, and a second run changes nothing",
+			appliesTo: ["migrate"],
+		},
+		{
 			id: "tests-use-temp-home",
-			statement: "tests and manual checks use a temporary JTK_HOME with fake credentials, never the real vault",
+			statement: "tests and manual checks use a temporary DOGSOUT_HOME with fake credentials, never the real vault",
 		},
 	],
 	vault: {
 		shape:
 			"plaintext {version:1, vaults:{<vault>:{<item>:{fields, tags?, owner?, updated_at}}}}; on disk the v2 envelope {version:2, vault_id, fingerprint, data, slots[]} — type-contracts/src/vault.ts",
 		crypto: [
-			"random 32-byte DEK, AES-256-GCM over the whole vault JSON (AAD jtk/data/v2|vault_id), fresh IV per save",
+			"random 32-byte DEK, AES-256-GCM over the whole vault JSON (AAD jtk/data/v2|vault_id — a frozen wire constant, see the MUST NOT CHANGE note in vault/envelope.ts), fresh IV per save",
 			"se slot = ECDH(Secure Enclave, ephemeral) → HKDF jtk/se-kek/v1 → AES-GCM wrap of the DEK (AAD jtk/slot/se|vault_id|slot_id)",
 			"fingerprint = HKDF(DEK, jtk/fingerprint/v1)[0:4]; no password, no Argon2id",
 			"every write: tmp (0600) → read-back check → .bak.1→.bak.2, vault.enc→.bak.1 → rename (2 rolling backups)",
@@ -211,7 +227,7 @@ export const featureMap: FeatureMap = {
 			name: "ask channel chain",
 			path: "src/ask/",
 			tier: "exp",
-			note: "swiftui -> cli approval channels, fail-closed when no channel decides",
+			note: "mygo -> cli approval channels, fail-closed when no channel decides",
 		},
 		{ name: "policy core", path: "src/policy/", tier: "exp", note: "pure evaluator + TTL tiers" },
 		{
@@ -230,7 +246,7 @@ export const featureMap: FeatureMap = {
 			name: "secure enclave helper client",
 			path: "src/vault/se.ts",
 			tier: "exp",
-			note: "spawns jtk-approve --se-* per call (JTK_SE_HELPER override; test fake in src/vault/helper/fake-se.ts)",
+			note: "spawns dogsout-se per call (DOGSOUT_SE_HELPER override; test fake in src/vault/helper/fake-se.ts)",
 		},
 		{
 			name: "api skeleton",

@@ -1,4 +1,4 @@
-import { evaluate } from "@jtk/core";
+import { evaluate } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { ctxAndConfig } from "../context.ts";
@@ -29,7 +29,7 @@ async function policyTestCore(a: { file: string }): Promise<Result<string, strin
 			principal: c.principal,
 			groups: c.groups ?? [],
 			alias: c.alias,
-			address: c.address ?? "jtk://sim/" + c.alias + "/value",
+			address: c.address ?? "dogsout://sim/" + c.alias + "/value",
 			valueHash: "fixture-hash",
 			rules: cfg.rules ?? [],
 			grants: [],

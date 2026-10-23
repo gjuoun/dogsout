@@ -16,13 +16,13 @@ describe("config.example.json parses (spec §4 walkthrough fixture)", () => {
 	});
 });
 
-describe("AddressSchema (jtk:// F1 subset)", () => {
+describe("AddressSchema (dogsout:// F1 subset)", () => {
 	test("accepts vault/item/field and dotted json path", () => {
-		expect(AddressSchema.safeParse("jtk://dev/zai/api_key").success).toBe(true);
-		expect(AddressSchema.safeParse("jtk://gcp/prod-sa/key.client_email").success).toBe(true);
+		expect(AddressSchema.safeParse("dogsout://dev/zai/api_key").success).toBe(true);
+		expect(AddressSchema.safeParse("dogsout://gcp/prod-sa/key.client_email").success).toBe(true);
 	});
-	test("rejects short / non-jtk forms", () => {
-		expect(AddressSchema.safeParse("jtk://dev/zai").success).toBe(false);
+	test("rejects short / non-dogsout forms", () => {
+		expect(AddressSchema.safeParse("dogsout://dev/zai").success).toBe(false);
 		expect(AddressSchema.safeParse("op://dev/zai/x").success).toBe(false);
 		expect(AddressSchema.safeParse("ZAI_API_KEY").success).toBe(false);
 	});

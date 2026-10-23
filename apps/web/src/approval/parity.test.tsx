@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ApprovalPanel } from "./ApprovalPanel.tsx";
 import { approvedCount, type Choice, DEFAULT_UI_TIER, decisionFor } from "./model.ts";
 
-/** The reference decision: apps/ask/helper/jtk-approve.swift --selftest prints exactly this. */
+/** The reference decision: the mygo helper (apps/ask) --selftest prints exactly this. */
 const REFERENCE =
 	'{"decision":"approve","ttl":"10m","renew_existing":false,"keys":{"gh":"ttl","openai":"once","aws":"deny"}}';
 
@@ -12,9 +12,9 @@ const REQUEST = {
 	session: "sess_9f2ac31e",
 	at: "2026-10-09T21:14:00Z",
 	keys: [
-		{ alias: "gh", address: "jtk://dev/gh/pat", note: "github.com PAT · repo read", value_hash: "aa11" },
-		{ alias: "openai", address: "jtk://dev/openai/key", note: "api.openai.com · env", value_hash: "bb22" },
-		{ alias: "aws", address: "jtk://staging/aws/secret", note: "sts staging · env", value_hash: "cc33" },
+		{ alias: "gh", address: "dogsout://dev/gh/pat", note: "github.com PAT · repo read", value_hash: "aa11" },
+		{ alias: "openai", address: "dogsout://dev/openai/key", note: "api.openai.com · env", value_hash: "bb22" },
+		{ alias: "aws", address: "dogsout://staging/aws/secret", note: "sts staging · env", value_hash: "cc33" },
 	],
 	granted: [
 		{ alias: "hf", status: "剩 47m" },
@@ -97,7 +97,7 @@ describe("approval panel markup", () => {
 	});
 
 	test("no authenticator means no approval, and the reason is shown", () => {
-		const html = render({ blockedReason: "没有可用的平台认证器 — 用 CLI 或 swiftui 通道审批" });
+		const html = render({ blockedReason: "没有可用的平台认证器 — 用 CLI 或 mygo 通道审批" });
 		expect(html).toContain("没有可用的平台认证器");
 		expect(html.includes("disabled")).toBe(true);
 	});

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { jtkHome, loadConfig } from "@jtk/core";
+import { dogsoutHome, loadConfig } from "@dogsout/core";
 import type { Io } from "./cmd.ts";
 import { runExport } from "./export.ts";
 import { runImportEnv } from "./import-env.ts";
@@ -10,22 +10,22 @@ import { runInit } from "./init.ts";
 
 const FAKE_SE = join(import.meta.dir, "..", "..", "..", "packages", "core", "src", "vault", "helper", "fake-se.ts");
 const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
-const FIXTURE = ["DIRECT_ONE=hello123", "REF_ONE=jtk://e2e/misc/DIRECT_ONE", "OP_X=op://dev/a/b"].join("\n");
+const FIXTURE = ["DIRECT_ONE=hello123", "REF_ONE=dogsout://e2e/misc/DIRECT_ONE", "OP_X=op://dev/a/b"].join("\n");
 let home = "";
 let fixturePath = "";
 
 beforeAll(async () => {
-	home = mkdtempSync(join(tmpdir(), "jtk-io-"));
-	process.env.JTK_HOME = home;
-	process.env.JTK_SE_HELPER = FAKE_SE;
+	home = mkdtempSync(join(tmpdir(), "dogsout-io-"));
+	process.env.DOGSOUT_HOME = home;
+	process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 	await runInit([], stdinOf(""));
 	fixturePath = join(home, "fixture.env");
 	await Bun.write(fixturePath, FIXTURE + "\n");
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
-	delete process.env.JTK_SE_HELPER;
+	delete process.env.DOGSOUT_HOME;
+	delete process.env.DOGSOUT_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 
@@ -43,7 +43,7 @@ describe("import-env / export round-trip", () => {
 		const r = await runExport(["--format", "env-ref"]);
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
-			expect(r.value).toBe("REF_ONE=jtk://e2e/misc/DIRECT_ONE");
+			expect(r.value).toBe("REF_ONE=dogsout://e2e/misc/DIRECT_ONE");
 		}
 	});
 
@@ -64,7 +64,7 @@ describe("import-env / export round-trip", () => {
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
 			const parsed = JSON.parse(r.value) as Record<string, string>;
-			const cfg = await loadConfig(jtkHome());
+			const cfg = await loadConfig(dogsoutHome());
 			if (cfg.isErr()) throw new Error(cfg.error);
 			expect(parsed).toEqual(cfg.value.aliases);
 		}

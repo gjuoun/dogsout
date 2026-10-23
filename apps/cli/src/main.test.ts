@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { configPath, vaultPath } from "@jtk/core";
+import { configPath, vaultPath } from "@dogsout/core";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
 import { runGet } from "./get.ts";
@@ -16,18 +16,18 @@ const stdinOf = (v: string): Io => ({ stdin: async () => v, stdout: () => {} });
 let home = "";
 
 beforeAll(() => {
-	home = mkdtempSync(join(tmpdir(), "jtk-cli-"));
-	process.env.JTK_HOME = home;
-	process.env.JTK_SE_HELPER = FAKE_SE;
+	home = mkdtempSync(join(tmpdir(), "dogsout-cli-"));
+	process.env.DOGSOUT_HOME = home;
+	process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 });
 
 afterAll(() => {
-	delete process.env.JTK_HOME;
-	delete process.env.JTK_SE_HELPER;
+	delete process.env.DOGSOUT_HOME;
+	delete process.env.DOGSOUT_SE_HELPER;
 	rmSync(home, { recursive: true, force: true });
 });
 
-describe("F1 CLI monolith (JTK_HOME isolated)", () => {
+describe("F1 CLI monolith (DOGSOUT_HOME isolated)", () => {
 	test("init creates config + vault, both 0600", async () => {
 		const r = await runInit([], stdinOf(""));
 		expect(r.isOk()).toBe(true);
@@ -41,15 +41,15 @@ describe("F1 CLI monolith (JTK_HOME isolated)", () => {
 	});
 
 	test("set → get --reveal returns original value", async () => {
-		const s = await runSet(["jtk://dev/zai/api_key", "--stdin"], stdinOf("sk-test-123\n"));
+		const s = await runSet(["dogsout://dev/zai/api_key", "--stdin"], stdinOf("sk-test-123\n"));
 		expect(s.isOk()).toBe(true);
-		const g = await runGet(["jtk://dev/zai/api_key", "--reveal"]);
+		const g = await runGet(["dogsout://dev/zai/api_key", "--reveal"]);
 		expect(g.isOk()).toBe(true);
 		if (g.isOk()) expect(g.value).toBe("sk-test-123");
 	});
 
 	test("get masked by default (no plaintext)", async () => {
-		const g = await runGet(["jtk://dev/zai/api_key"]);
+		const g = await runGet(["dogsout://dev/zai/api_key"]);
 		expect(g.isOk()).toBe(true);
 		if (g.isOk()) {
 			expect(g.value.startsWith("sha256:")).toBe(true);
@@ -58,7 +58,7 @@ describe("F1 CLI monolith (JTK_HOME isolated)", () => {
 	});
 
 	test("alias registers and resolves", async () => {
-		const a = await runAlias(["ZAI_API_KEY", "jtk://dev/zai/api_key"]);
+		const a = await runAlias(["ZAI_API_KEY", "dogsout://dev/zai/api_key"]);
 		expect(a.isOk()).toBe(true);
 		const g = await runGet(["ZAI_API_KEY", "--reveal"]);
 		expect(g.isOk()).toBe(true);
@@ -75,9 +75,9 @@ describe("F1 CLI monolith (JTK_HOME isolated)", () => {
 	});
 
 	test("rm removes; subsequent get fails with not-found", async () => {
-		const rm = await runRm(["jtk://dev/zai/api_key"]);
+		const rm = await runRm(["dogsout://dev/zai/api_key"]);
 		expect(rm.isOk()).toBe(true);
-		const g = await runGet(["jtk://dev/zai/api_key"]);
+		const g = await runGet(["dogsout://dev/zai/api_key"]);
 		expect(g.isErr()).toBe(true);
 		if (g.isErr()) expect(g.error).toContain("not found");
 	});
@@ -87,13 +87,13 @@ describe("v2 init and unlock (fake secure enclave helper)", () => {
 	let v2home = "";
 	let savedHome: string | undefined;
 	beforeAll(() => {
-		v2home = mkdtempSync(join(tmpdir(), "jtk-cli-v2-"));
-		savedHome = process.env.JTK_HOME;
-		process.env.JTK_HOME = v2home;
-		process.env.JTK_SE_HELPER = FAKE_SE;
+		v2home = mkdtempSync(join(tmpdir(), "dogsout-cli-v2-"));
+		savedHome = process.env.DOGSOUT_HOME;
+		process.env.DOGSOUT_HOME = v2home;
+		process.env.DOGSOUT_SE_HELPER = FAKE_SE;
 	});
 	afterAll(() => {
-		process.env.JTK_HOME = savedHome;
+		process.env.DOGSOUT_HOME = savedHome;
 		rmSync(v2home, { recursive: true, force: true });
 	});
 
@@ -106,10 +106,10 @@ describe("v2 init and unlock (fake secure enclave helper)", () => {
 	});
 
 	test("cancelled Touch ID fails closed", async () => {
-		expect((await runSet(["jtk://dev/gh/token", "--stdin"], stdinOf("FAKE-ghp\n"))).isOk()).toBe(true);
+		expect((await runSet(["dogsout://dev/gh/token", "--stdin"], stdinOf("FAKE-ghp\n"))).isOk()).toBe(true);
 		process.env.FAKE_SE_MODE = "deny";
 		try {
-			const g = await runGet(["jtk://dev/gh/token", "--reveal"]);
+			const g = await runGet(["dogsout://dev/gh/token", "--reveal"]);
 			expect(g._unsafeUnwrapErr()).toContain("vault unlock failed");
 		} finally {
 			delete process.env.FAKE_SE_MODE;

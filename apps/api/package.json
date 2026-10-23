@@ -1,10 +1,10 @@
 {
-	"name": "@jtk/api",
+	"name": "@dogsout/api",
 	"version": "0.0.2",
 	"private": true,
 	"type": "module",
 	"license": "Apache-2.0",
-	"description": "junethekey Hono/OpenAPI server — the F3 daemon seed",
+	"description": "dogsout Hono/OpenAPI server — the F3 daemon seed",
 	"exports": {
 		".": "./src/server.ts"
 	},
@@ -16,8 +16,8 @@
 	},
 	"dependencies": {
 		"@hono/zod-openapi": "1.6.3",
-		"@jtk/core": "workspace:*",
-		"@jtk/type-contracts": "workspace:*",
+		"@dogsout/core": "workspace:*",
+		"@dogsout/type-contracts": "workspace:*",
 		"@simplewebauthn/server": "14.0.3",
 		"drizzle-orm": "0.45.4",
 		"drizzle-zod": "0.8.3",

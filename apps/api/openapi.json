@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "junethekey",
+    "title": "dogsout",
     "version": "0.1.0",
     "description": "credential broker for agents — ask + approval surface (F3 preview)"
   },

@@ -1,13 +1,13 @@
 import { Database } from "bun:sqlite";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { jtkHome } from "@jtk/core";
+import { dogsoutHome } from "@dogsout/core";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema.ts";
 
-/** `JTK_API_DB` overrides the store (`:memory:` for tests). Default lives beside the vault. */
+/** `DOGSOUT_API_DB` overrides the store (`:memory:` for tests). Default lives beside the vault. */
 export function apiDbPath(): string {
-	return process.env.JTK_API_DB ?? join(jtkHome(), "webui.db");
+	return process.env.DOGSOUT_API_DB ?? join(dogsoutHome(), "webui.db");
 }
 
 export type ApiDb = ReturnType<typeof drizzle<typeof schema>>;

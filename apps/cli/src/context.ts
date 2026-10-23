@@ -1,5 +1,5 @@
-import { type Ctx, jtkHome, loadConfig, loadSessions, openData } from "@jtk/core";
-import type { Config, VaultData } from "@jtk/type-contracts";
+import { type Ctx, dogsoutHome, loadConfig, loadSessions, openData } from "@dogsout/core";
+import type { Config, VaultData } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
 
 /**
@@ -8,7 +8,7 @@ import { err, ok, type Result } from "neverthrow";
  * than inside any one of them. There is no password: the vault unlocks through the Secure Enclave.
  */
 export function ctxFromEnv(): Result<Ctx, string> {
-	return ok({ home: jtkHome() });
+	return ok({ home: dogsoutHome() });
 }
 
 /** Read the vault once, for a caller that is not writing it back. */

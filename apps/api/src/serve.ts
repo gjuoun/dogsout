@@ -10,6 +10,6 @@ export function serve(app: OpenAPIHono, port: number, websocket?: BunWebSocketHa
 	const server = websocket
 		? Bun.serve({ port, fetch, websocket: websocket as unknown as WebSocketHandler<unknown> })
 		: Bun.serve({ port, fetch });
-	console.log(`jtk api on http://127.0.0.1:${server.port} (/health, /ask, /asks, /doc, /events)`);
+	console.log(`dogsout api on http://127.0.0.1:${server.port} (/health, /ask, /asks, /doc, /events)`);
 	return server;
 }

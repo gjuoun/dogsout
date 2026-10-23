@@ -1,9 +1,9 @@
-import type { GrantMeta } from "@jtk/type-contracts";
+import type { GrantMeta } from "@dogsout/type-contracts";
 
 /**
  * Status label for a read-only "already held" row. Wording is the mockup's
  * (apps/ask/mockups/jtk-approve.swift): `session` / `剩 47m` / `长期·30d衰减`.
- * Shared by the approval request builder (swiftui/cli/webui all render this) and the
+ * Shared by the approval request builder (mygo/cli/webui all render this) and the
  * WebUI grant snapshot, so the two channels cannot drift apart.
  */
 export function grantStatusLabel(

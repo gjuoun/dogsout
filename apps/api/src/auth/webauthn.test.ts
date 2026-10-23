@@ -35,7 +35,7 @@ const ASK = {
 	principal: "agent@laptop",
 	session: "sess_1",
 	at: "2026-10-22T00:00:00Z",
-	keys: [{ alias: "gh", address: "jtk://dev/gh/pat", note: "", value_hash: "aa" }],
+	keys: [{ alias: "gh", address: "dogsout://dev/gh/pat", note: "", value_hash: "aa" }],
 	granted: [],
 };
 
@@ -109,7 +109,7 @@ describe("webauthn gate", () => {
 			if (id === undefined) await Bun.sleep(10);
 		}
 		const token = issueToken();
-		const ok = await call(permissive, "post", `/asks/${id}/decision`, APPROVE, { "x-jtk-assertion": token });
+		const ok = await call(permissive, "post", `/asks/${id}/decision`, APPROVE, { "x-dogsout-assertion": token });
 		expect(ok.status).toBe(200);
 		expect(await (await asker).json()).toEqual(APPROVE);
 	});

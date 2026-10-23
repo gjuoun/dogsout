@@ -1,9 +1,9 @@
 {
-	"name": "@jtk/approval-ui",
+	"name": "@dogsout/approval-ui",
 	"version": "0.0.2",
 	"private": true,
 	"license": "Apache-2.0",
-	"description": "junethekey native approval window (macOS, SwiftUI)",
+	"description": "dogsout native approval window (macOS, mygo native UI in Go)",
 	"scripts": {
 		"build": "bash build.sh"
 	}

@@ -17,7 +17,7 @@ async function seRef() {
 
 describe("vault.enc file IO", () => {
 	test("write → readVaultRaw round-trips the envelope, file mode 0600", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-vault-io-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-vault-io-"));
 		try {
 			const path = join(home, "vault.enc");
 			const { file } = await createEnvelopeV2({ version: 1, vaults: {} }, await seRef());
@@ -30,7 +30,7 @@ describe("vault.enc file IO", () => {
 	});
 
 	test("unparseable file → corrupt; missing file → io", async () => {
-		const home = mkdtempSync(join(tmpdir(), "jtk-vault-io-"));
+		const home = mkdtempSync(join(tmpdir(), "dogsout-vault-io-"));
 		try {
 			const path = join(home, "vault.enc");
 			expect((await readVaultRaw(path))._unsafeUnwrapErr().kind).toBe("io");
