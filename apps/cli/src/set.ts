@@ -1,5 +1,3 @@
-import readline from "node:readline/promises";
-import { Writable } from "node:stream";
 import { formatAddress, nowIso, openData, saveData } from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
@@ -31,10 +29,29 @@ export function setCommand(io: Io = defaultIo) {
 				let value: string;
 				if (process.stdin.isTTY) {
 					process.stderr.write(`value for ${formatAddress(parsed.value)} (input hidden, Enter to finish): `);
-					const muted = new Writable({ write: (_c, _enc, cb) => cb() });
-					const rl = readline.createInterface({ input: process.stdin, output: muted });
-					value = await rl.question("");
-					rl.close();
+					// raw mode disables the kernel tty's local echo; muted readline is NOT enough
+					value = await new Promise<string>((resolve) => {
+						let buf = "";
+						process.stdin.setRawMode(true);
+						process.stdin.resume();
+						const finish = (v: string) => {
+							process.stdin.setRawMode(false);
+							process.stdin.pause();
+							process.stdin.removeListener("data", onData);
+							process.stderr.write("\n");
+							resolve(v);
+						};
+						const onData = (chunk: Buffer) => {
+							for (const byte of chunk) {
+								if (byte === 0x0d || byte === 0x0a) return finish(buf);
+								if (byte === 0x04) return finish(buf); // Ctrl-D
+								if (byte === 0x03) return finish(""); // Ctrl-C aborts
+								if (byte === 0x7f || byte === 0x08) buf = buf.slice(0, -1);
+								else buf += String.fromCharCode(byte);
+							}
+						};
+						process.stdin.on("data", onData);
+					});
 				} else {
 					value = (await io.stdin()).replace(/\n$/, "");
 				}
