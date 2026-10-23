@@ -1,8 +1,8 @@
+import readline from "node:readline/promises";
+import { Writable } from "node:stream";
 import { formatAddress, nowIso, openData, saveData } from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
-import readline from "node:readline/promises";
-import { Writable } from "node:stream";
 import { desugarAddress } from "./address-input.ts";
 import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
@@ -30,9 +30,7 @@ export function setCommand(io: Io = defaultIo) {
 				// TTY: prompt with hidden input instead of silently waiting on stdin.
 				let value: string;
 				if (process.stdin.isTTY) {
-					process.stderr.write(
-						`value for ${formatAddress(parsed.value)} (input hidden, Enter to finish): `,
-					);
+					process.stderr.write(`value for ${formatAddress(parsed.value)} (input hidden, Enter to finish): `);
 					const muted = new Writable({ write: (_c, _enc, cb) => cb() });
 					const rl = readline.createInterface({ input: process.stdin, output: muted });
 					value = await rl.question("");
