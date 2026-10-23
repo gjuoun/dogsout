@@ -81,23 +81,18 @@ export const featureMap: FeatureMap = {
 		},
 		ls: {
 			tier: "stable",
-			does: "list field addresses (or --json vault summary) without values; an optional path narrows by glob",
+			does: "list field addresses without values; a TTY gets an indented tree, a pipe one address per line, --json the metadata trie",
 			gotchas: [
+				"one command, three views of the same listing: tty tree (human), piped addresses (grep/xargs), --json trie (agents) — the retired `tree` command is now `ls --json`",
 				"glob: a.b.* is one level, a.b.** is the subtree; a path shorter than vault/item/field is a subtree prefix",
+				"--json leaves carry address / value_hash / bytes / updated_at — never a value",
+				"the --json trie is rooted where the path pinned it: (none) -> vaults, vault -> items, vault.item -> fields",
 				"a literal field address that matches nothing is an error; a wildcard that matches nothing prints nothing",
+				"subpaths are not listing arguments (the leaves are fields)",
 				"stored addresses that violate the segment charset are reported on stderr — never rewritten; get/rm still accept them so the value can be moved by hand",
 			],
 			legacyFlags: { json: "ls-json" },
-			legacyKeys: ["ls-lines"],
-		},
-		tree: {
-			tier: "exp",
-			does: "print the vault as a JSON trie: nested maps down to one leaf per field, each carrying metadata",
-			gotchas: [
-				"leaves carry address / value_hash / bytes / updated_at — never a value",
-				"the tree is rooted where the path pinned it: (none) -> vaults, vault -> items, vault.item -> fields",
-				"same glob vocabulary as ls; subpaths are not tree arguments (the leaves are fields)",
-			],
+			legacyKeys: ["ls-lines", "tree"],
 		},
 		rm: {
 			tier: "stable",
@@ -231,7 +226,7 @@ export const featureMap: FeatureMap = {
 			id: "address-segment-charset",
 			statement:
 				"every vault, item and field segment a write introduces is [a-z0-9_-] (lowercase, no dots); subpath keys are JSON keys and exempt. Reads and rm stay tolerant so pre-charset addresses remain readable and removable, and violations are reported, never rewritten",
-			appliesTo: ["set", "get", "rm", "ls", "tree", "alias", "map", "import-env", "migrate"],
+			appliesTo: ["set", "get", "rm", "ls", "alias", "map", "import-env", "migrate"],
 		},
 		{
 			id: "tests-use-temp-home",

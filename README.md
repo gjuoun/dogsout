@@ -77,7 +77,7 @@ dogsout migrate             # rewrite addresses + move ~/.config/junethekey -> ~
 
 Values live at `dogsout://vault/item/field` addresses; a dotted path digs into JSON field values.
 Every segment is a lowercase token — `[a-z0-9_-]`, never a dot (the dot is the separator) — which is
-what keeps an address unambiguous as storage, as a glob, and as tree input. Input sugar follows jq:
+what keeps an address unambiguous as storage, as a glob, and as an `ls` argument. Input sugar follows jq:
 `dogsout://dev/zai/api_key`, `.dev.zai.api_key` and `dev.zai.api_key` are the same address, and the
 sugar is expanded in the CLI only (stored addresses stay canonical).
 
@@ -94,16 +94,18 @@ A value lives on a leaf: `set .dev.zai` (an item) and `set .dev.zai.api_key.extr
 refused rather than writing something the caller did not ask for. A subpath key containing a dot is
 written in brackets: `dogsout get '.gcp.sa.key["client.email"]'`.
 
-`ls` and `tree` take the same input plus globs — `a.b.*` is one level, `a.b.**` is the subtree:
+`ls` takes an optional path plus globs — `a.b.*` is one level, `a.b.**` is the subtree. On a terminal
+it prints an indented tree; piped it prints one canonical address per line, which is what `grep` and
+`xargs` want:
 
 ```bash
-dogsout ls                  # every field address, no values
+dogsout ls                  # the vault as an indented tree (piped: one address per line)
 dogsout ls dev.gh.*         # the fields of one item
 dogsout ls dev.**           # everything in the dev vault
-dogsout tree dev            # JSON trie for agents: leaves carry metadata, never values
+dogsout ls --json dev       # JSON trie for agents: leaves carry metadata, never values
 ```
 
-`tree` output is a nested map down to one leaf per field; a leaf is
+`ls --json` is a nested map down to one leaf per field, rooted where the path pinned it; a leaf is
 `{"address": …, "value_hash": "sha256:…", "bytes": N, "updated_at": …}`. Addresses stored before
 the charset rule are listed by `ls` (on stderr) and by `dogsout migrate` — reported, never rewritten.
 

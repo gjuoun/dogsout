@@ -63,10 +63,13 @@ export interface Io {
 	stdout: (line: string) => void;
 	/** Warnings (legacy data, advisories) go here so stdout stays machine-readable. */
 	stderr?: (line: string) => void;
+	/** Is stdout a terminal? Commands with a human and a machine view branch on this; tests inject it. */
+	tty?: boolean;
 }
 
 export const defaultIo: Io = {
 	stdin: async () => await new Response(Bun.stdin).text(),
 	stdout: (l) => console.log(l),
 	stderr: (l) => console.error(l),
+	tty: process.stdout.isTTY === true,
 };

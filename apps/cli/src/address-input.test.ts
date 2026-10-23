@@ -62,7 +62,7 @@ describe("desugarAddress (jq-style input sugar)", () => {
 	});
 });
 
-describe("expandPattern (ls / tree arguments)", () => {
+describe("expandPattern (ls arguments)", () => {
 	test("a literal field address is exact", () => {
 		const p = pattern(".dev.gh.pat");
 		expect(p.pattern).toEqual(["dev", "gh", "pat"]);

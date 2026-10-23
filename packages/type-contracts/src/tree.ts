@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * Leaf metadata of the vault tree (`dogsout tree`): one field address plus facts about its value —
- * never the value itself (PRD red line 1). Fixed here so the CLI output, the API and a future
+ * Leaf metadata of the vault trie (`dogsout ls --json`): one field address plus facts about its
+ * value — never the value itself (PRD red line 1). Fixed here so the CLI output, the API and a future
  * SQLite store agree on one shape instead of each inventing its own.
  */
 export const FieldMetaSchema = z.object({

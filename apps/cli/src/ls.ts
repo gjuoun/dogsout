@@ -1,21 +1,41 @@
-import { groupViolations, openData, type PathEntry, scanAddress, selectEntries, vaultStore } from "@dogsout/core";
+import {
+	buildTree,
+	groupViolations,
+	openData,
+	type PathEntry,
+	scanAddress,
+	selectEntries,
+	vaultStore,
+} from "@dogsout/core";
 import { command, flag, optional, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { expandPattern } from "./address-input.ts";
 import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
+/** How many leading segments the pattern pinned before its first glob (the JSON trie's root). */
+function pinnedDepth(pattern: readonly string[]): number {
+	const glob = pattern.findIndex((seg) => seg === "*" || seg === "**");
+	return glob === -1 ? pattern.length : glob;
+}
+
+/**
+ * `dogsout ls [path] [--json]` — field addresses without values, three views of one listing:
+ * a TTY gets an indented tree, a pipe gets one canonical address per line (grep/xargs), and
+ * `--json` gets the metadata trie agents consume. `*` / `**` glob in every view.
+ */
 export function lsCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "ls",
-			description: "list field addresses without revealing values (optional glob: .vault.item.*, .vault.**)",
+			description:
+				"list field addresses without revealing values (tree on a TTY, one address per line when piped; --json for metadata)",
 			args: {
 				path: positional({
 					type: optional(string),
 					displayName: "[vault.item.field | .vault.item.* | .vault.**]",
 				}),
-				json: flag({ long: "json", description: "machine-readable vault summary" }),
+				json: flag({ long: "json", description: "machine-readable trie: leaves carry metadata, never values" }),
 			},
 			handler: async ({ path, json }): Promise<Result<string, string>> => {
 				const ctxR = ctxFromEnv();
@@ -23,19 +43,20 @@ export function lsCommand(io: Io = defaultIo) {
 				const opened = await openData(ctxR.value);
 				if (opened.isErr()) return err(opened.error);
 				const store = vaultStore(opened.value.data);
-				const selected = path === undefined ? ok<PathEntry[]>(store.list()) : selectFor(path, store);
+				const selected =
+					path === undefined ? ok<Selection>({ entries: store.list(), depth: 0 }) : selectFor(path, store);
 				if (selected.isErr()) return err(selected.error);
-				const entries = selected.value;
+				const { entries, depth } = selected.value;
 				reportViolations(io, store.list());
-				const summary: Record<string, Record<string, string[]>> = {};
-				for (const entry of entries) {
-					const [vault, item, field] = entry.path as [string, string, string];
-					summary[vault] ??= {};
-					const items = summary[vault] as Record<string, string[]>;
-					items[item] ??= [];
-					(items[item] as string[]).push(field);
+				// The trie is rooted where the pattern pinned it, so `ls --json dev.gh` is that item, not the vault.
+				if (json) {
+					const scoped = entries.map((entry) => ({ ...entry, path: entry.path.slice(depth) }));
+					const built = await buildTree(scoped);
+					if (built.isErr()) return err(built.error);
+					return ok(JSON.stringify(built.value, null, 2));
 				}
-				const text = json ? JSON.stringify({ vaults: summary }, null, 2) : entries.map((e) => e.address).join("\n");
+				// TTY: indented tree (human view); pipe/redirect: one canonical address per line.
+				const text = ttyOf(io) ? asTree(entries) : entries.map((e) => e.address).join("\n");
 				return ok(text);
 			},
 		}),
@@ -43,13 +64,58 @@ export function lsCommand(io: Io = defaultIo) {
 	);
 }
 
+/** The listing plus where its JSON trie is rooted (0 = vaults, 2 = the field itself). */
+interface Selection {
+	entries: PathEntry[];
+	depth: number;
+}
+
 /** Entries for the optional glob argument; a literal field address that matches nothing is a miss. */
-function selectFor(path: string, store: ReturnType<typeof vaultStore>): Result<PathEntry[], string> {
+function selectFor(path: string, store: ReturnType<typeof vaultStore>): Result<Selection, string> {
 	const parsed = expandPattern(path);
 	if (parsed.isErr()) return err(parsed.error);
 	const entries = selectEntries(store, parsed.value.pattern);
 	if (entries.length === 0 && parsed.value.literalField) return fail(`not found: ${parsed.value.source}`);
-	return ok(entries);
+	// A full 3-segment field address pins the leaf itself: its own key is the trie root.
+	return ok({ entries, depth: Math.min(pinnedDepth(parsed.value.pattern), 2) });
+}
+
+function ttyOf(io: Io): boolean {
+	return io.tty ?? process.stdout.isTTY === true;
+}
+
+/** vault -> item -> field, dot-prefixed and indented — readable, not parseable (use the pipe view). */
+function asTree(entries: readonly PathEntry[]): string {
+	// tree(1)-style connectors: ├── for non-last children, └── for the last, │ for open ancestors.
+	const conn = (prefix: string, last: boolean) => `${prefix}${last ? "└── " : "├── "}`;
+	const lines: string[] = [];
+	const vaults = [...groupBy(entries).entries()];
+	vaults.forEach(([vault, items], vi) => {
+		const vLast = vi === vaults.length - 1;
+		lines.push(`.${vault}`);
+		const itemEntries = Object.entries(items);
+		itemEntries.forEach(([item, fields], ii) => {
+			const iLast = ii === itemEntries.length - 1;
+			lines.push(conn(vLast ? "   " : "│  ", iLast) + `.${item}`);
+			fields.forEach((field, fi) => {
+				const fLast = fi === fields.length - 1;
+				lines.push(conn(`${vLast ? "   " : "│  "}${iLast ? "   " : "│  "}`, fLast) + `.${field}`);
+			});
+		});
+	});
+	return lines.join("\n");
+}
+
+function groupBy(entries: readonly PathEntry[]): Map<string, Record<string, string[]>> {
+	const summary = new Map<string, Record<string, string[]>>();
+	for (const entry of entries) {
+		const [vault, item, field] = entry.path as [string, string, string];
+		const items = summary.get(vault) ?? {};
+		items[item] ??= [];
+		(items[item] as string[]).push(field);
+		summary.set(vault, items);
+	}
+	return summary;
 }
 
 /**

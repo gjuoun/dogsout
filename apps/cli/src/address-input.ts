@@ -128,7 +128,7 @@ export interface PathPattern {
 }
 
 /**
- * A `ls` / `tree` argument: a literal field address, or a subtree prefix. Anything shorter than
+ * A `ls` argument: a literal field address, or a subtree prefix. Anything shorter than
  * vault/item/field is a prefix, so `dev` means `dev.**` and `dev.gh` means `dev.gh.**`; a pattern
  * that already ends in `**`, and anything that already names a field, is taken as written.
  * Subpaths are not patterns (the leaves are fields).
@@ -139,7 +139,7 @@ export function expandPattern(input: string): Result<PathPattern, string> {
 	const parts = segs.value;
 	const shown = input.trim();
 	if (parts.length > 3) {
-		return err(`"${shown}" addresses a subpath — ls/tree match field addresses (vault/item/field), not subpaths`);
+		return err(`"${shown}" addresses a subpath — ls matches field addresses (vault/item/field), not subpaths`);
 	}
 	for (let i = 0; i < parts.length; i++) {
 		const seg = parts[i] as string;

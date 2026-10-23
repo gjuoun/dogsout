@@ -24,7 +24,6 @@ import { whyCommand } from "./policy/why.ts";
 import { rmCommand } from "./rm.ts";
 import { runCommand } from "./run.ts";
 import { setCommand } from "./set.ts";
-import { treeCommand } from "./tree.ts";
 import { vaultRekeyCommand } from "./vault/rekey.ts";
 import { vaultRestoreCommand } from "./vault/restore.ts";
 import { vaultSlotRmCommand } from "./vault/slot-rm.ts";
@@ -37,7 +36,6 @@ export const COMMANDS = {
 	set: setCommand(),
 	get: getCommand(),
 	ls: lsCommand(),
-	tree: treeCommand(),
 	rm: rmCommand(),
 	alias: aliasCommand(),
 	map: mapCommand(),

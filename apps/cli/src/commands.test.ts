@@ -7,7 +7,6 @@ const EXPECTED = [
 	"set",
 	"get",
 	"ls",
-	"tree",
 	"rm",
 	"alias",
 	"map",

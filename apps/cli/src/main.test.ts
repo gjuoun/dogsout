@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configPath, nowIso, openData, saveData, vaultPath } from "@dogsout/core";
+import type { FieldMeta, TreeNode } from "@dogsout/type-contracts";
 import { runAlias } from "./alias.ts";
 import type { Io } from "./cmd.ts";
 import { runGet } from "./get.ts";
@@ -65,12 +66,17 @@ describe("F1 CLI monolith (DOGSOUT_HOME isolated)", () => {
 		if (g.isOk()) expect(g.value).toBe("sk-test-123");
 	});
 
-	test("ls --json lists the stored field", async () => {
+	test("ls --json prints the metadata trie of the stored field", async () => {
 		const r = await runLs(["--json"]);
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
-			const parsed = JSON.parse(r.value) as { vaults: Record<string, Record<string, string[]>> };
-			expect(parsed.vaults.dev?.zai).toContain("api_key");
+			const tree = JSON.parse(r.value) as TreeNode;
+			const leaf = (tree.dev as TreeNode).zai as TreeNode;
+			expect(Object.keys(leaf)).toEqual(["api_key"]);
+			const meta = leaf.api_key as FieldMeta;
+			expect(meta.address).toBe("dogsout://dev/zai/api_key");
+			expect(meta.value_hash).toMatch(/^sha256:[0-9a-f]{8}$/);
+			expect(r.value).not.toContain("sk-test-123");
 		}
 	});
 
@@ -199,10 +205,14 @@ describe("ls glob and the legacy violation report", () => {
 		}
 	});
 
-	test("--json stays the same shape, filtered by the pattern", async () => {
+	test("--json is the metadata trie, rooted where the pattern pinned it", async () => {
 		const r = await runLs(["--json", "dev.gh"], io);
 		expect(r.isOk()).toBe(true);
-		if (r.isOk()) expect(JSON.parse(r.value)).toEqual({ vaults: { dev: { gh: ["pat", "token"] } } });
+		if (r.isOk()) {
+			const trie = JSON.parse(r.value) as TreeNode;
+			expect(Object.keys(trie).sort()).toEqual(["pat", "token"]);
+			expect((trie.pat as FieldMeta).address).toBe("dogsout://dev/gh/pat");
+		}
 	});
 
 	test("a literal field address that matches nothing is a miss, not an empty listing", async () => {
