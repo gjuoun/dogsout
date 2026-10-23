@@ -1,8 +1,29 @@
-import { loadConfig, nowIso, openData, parseEnvFile, saveData, writeConfig } from "@dogsout/core";
+import {
+	loadConfig,
+	nowIso,
+	openData,
+	parseAddressStrict,
+	parseEnvFile,
+	saveData,
+	segmentProblem,
+	writeConfig,
+} from "@dogsout/core";
 import { command, option, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
+
+/**
+ * Env names are UPPER_SNAKE by POSIX convention while address segments are lowercase
+ * [a-z0-9_-]; the field name is the lowercased key (GITHUB_TOKEN -> github_token). Unchanged
+ * otherwise, so a lowercase key imports under its own name.
+ */
+function fieldOf(key: string): Result<string, string> {
+	const field = key.toLowerCase();
+	const problem = segmentProblem("field", field);
+	if (problem !== null) return err(`${problem} (from key "${key}" in the env file)`);
+	return ok(field);
+}
 
 export function importEnvCommand() {
 	return withMeta(
@@ -39,6 +60,37 @@ export function importEnvCommand() {
 					);
 				}
 
+				// Validate the whole file before touching the vault: an import either lands completely
+				// or not at all (a half-imported .env is worse than a refused one).
+				const problems: string[] = [];
+				const vaultProblem = segmentProblem("vault", vault);
+				if (vaultProblem !== null) problems.push(vaultProblem);
+				const itemProblem = segmentProblem("item", item);
+				if (itemProblem !== null) problems.push(itemProblem);
+				const directs: Array<{ field: string; value: string }> = [];
+				const claimed = new Map<string, string>();
+				for (const d of plan.directs) {
+					const field = fieldOf(d.key);
+					if (field.isErr()) {
+						problems.push(field.error);
+						continue;
+					}
+					const previous = claimed.get(field.value);
+					if (previous !== undefined) {
+						problems.push(`keys "${previous}" and "${d.key}" both become field "${field.value}" — rename one`);
+						continue;
+					}
+					claimed.set(field.value, d.key);
+					directs.push({ field: field.value, value: d.value });
+				}
+				for (const r of plan.refs) {
+					const parsed = parseAddressStrict(r.value);
+					if (parsed.isErr()) problems.push(`ref ${r.key}=${r.value}: ${parsed.error}`);
+				}
+				if (problems.length > 0) {
+					return err(`import aborted, nothing written:\n  ${problems.join("\n  ")}`);
+				}
+
 				const ctxR = ctxFromEnv();
 				if (ctxR.isErr()) return err(ctxR.error);
 				const ctx = ctxR.value;
@@ -49,8 +101,9 @@ export function importEnvCommand() {
 				data.vaults[vault] ??= {};
 				const items = data.vaults[vault];
 				if (!items[item]) items[item] = { fields: {}, updated_at: nowIso() };
-				for (const d of plan.directs) items[item].fields[d.key] = d.value;
-				items[item].updated_at = nowIso();
+				const target = items[item];
+				for (const d of directs) target.fields[d.field] = d.value;
+				target.updated_at = nowIso();
 				const saved = await saveData(ctx, envelope, data);
 				if (saved.isErr()) return err(saved.error);
 
@@ -64,7 +117,7 @@ export function importEnvCommand() {
 
 				const skippedNote =
 					plan.skipped.length > 0 ? `, skipped ${plan.skipped.length} (op:// — adapter lands in F6)` : "";
-				return ok(`imported ${plan.directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
+				return ok(`imported ${directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
 			},
 		}),
 		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },

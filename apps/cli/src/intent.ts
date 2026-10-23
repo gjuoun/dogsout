@@ -57,11 +57,13 @@ export const featureMap: FeatureMap = {
 		},
 		set: {
 			tier: "stable",
-			does: "store a value from stdin at a dogsout:// address; vault/item are auto-created",
+			does: "store a value from stdin at a dogsout:// address (or .vault.item.field sugar); vault/item are auto-created",
 			plaintext: "value arrives via stdin, never as a CLI argument",
 			gotchas: [
 				"--stdin is declared but optional — the value ALWAYS comes from stdin",
 				"one trailing newline is stripped; empty result is refused",
+				"a value lives on a leaf only: an item path or a subpath is refused (one node cannot be both a value and a branch)",
+				"segments are [a-z0-9_-]; the jq-style sugar is CLI input only — stored addresses stay canonical",
 			],
 			legacyFlags: { stdin: "set-stdin" },
 			legacyKeys: ["set-autocreate"],
@@ -70,15 +72,32 @@ export const featureMap: FeatureMap = {
 			tier: "stable",
 			does: "read a value; masked sha256 digest + length by default",
 			plaintext: "stdout, only with --reveal",
-			gotchas: ["dotted subpath digs into JSON field values (legacy get-subpath)"],
+			gotchas: [
+				"dotted subpath digs into JSON field values (legacy get-subpath)",
+				"alias/map slots win over the sugar; a dotted name that is not registered is read as .vault.item.field",
+			],
 			legacyFlags: { reveal: "get-reveal" },
 			legacyKeys: ["get-mask", "get-subpath"],
 		},
 		ls: {
 			tier: "stable",
-			does: "list field addresses (or --json vault summary) without values",
+			does: "list field addresses (or --json vault summary) without values; an optional path narrows by glob",
+			gotchas: [
+				"glob: a.b.* is one level, a.b.** is the subtree; a path shorter than vault/item/field is a subtree prefix",
+				"a literal field address that matches nothing is an error; a wildcard that matches nothing prints nothing",
+				"stored addresses that violate the segment charset are reported on stderr — never rewritten; get/rm still accept them so the value can be moved by hand",
+			],
 			legacyFlags: { json: "ls-json" },
 			legacyKeys: ["ls-lines"],
+		},
+		tree: {
+			tier: "exp",
+			does: "print the vault as a JSON trie: nested maps down to one leaf per field, each carrying metadata",
+			gotchas: [
+				"leaves carry address / value_hash / bytes / updated_at — never a value",
+				"the tree is rooted where the path pinned it: (none) -> vaults, vault -> items, vault.item -> fields",
+				"same glob vocabulary as ls; subpaths are not tree arguments (the leaves are fields)",
+			],
 		},
 		rm: {
 			tier: "stable",
@@ -107,6 +126,7 @@ export const featureMap: FeatureMap = {
 				"--dry-run prints the plan and writes nothing; a second run reports zero rewrites and touches no file",
 				"never decrypts the vault: vault.enc stays byte-identical and every value_hash is copied verbatim",
 				"every other command refuses to start while a populated ~/.config/junethekey exists and ~/.config/dogsout does not",
+				"stored addresses that violate the segment charset are listed (config/grants only — the vault is never opened) and left untouched",
 			],
 			legacyKeys: ["storage-migration-idempotent"],
 		},
@@ -126,6 +146,11 @@ export const featureMap: FeatureMap = {
 		"import-env": {
 			tier: "stable",
 			does: "import a .env file: literals into the vault, dogsout:// refs become aliases, op:// skipped",
+			gotchas: [
+				"a literal key becomes its lowercased field name (GITHUB_TOKEN -> github_token): env names are UPPER_SNAKE, address segments are lowercase",
+				"a key still invalid after lowercasing, or two keys folding onto one field, aborts the whole import",
+				"--vault/--item and every dogsout:// ref are validated before anything is written (no partial import)",
+			],
 			legacyKeys: ["io-importenv"],
 		},
 		export: {
@@ -201,6 +226,12 @@ export const featureMap: FeatureMap = {
 			statement:
 				"the rename migration rewrites addresses only: it never opens the vault, keeps every value_hash, and a second run changes nothing",
 			appliesTo: ["migrate"],
+		},
+		{
+			id: "address-segment-charset",
+			statement:
+				"every vault, item and field segment a write introduces is [a-z0-9_-] (lowercase, no dots); subpath keys are JSON keys and exempt. Reads and rm stay tolerant so pre-charset addresses remain readable and removable, and violations are reported, never rewritten",
+			appliesTo: ["set", "get", "rm", "ls", "tree", "alias", "map", "import-env", "migrate"],
 		},
 		{
 			id: "tests-use-temp-home",

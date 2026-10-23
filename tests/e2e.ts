@@ -68,7 +68,7 @@ try {
 	const fixture = join(home1, "fixture.env");
 	await Bun.write(
 		fixture,
-		["E2E_DIRECT=hello-e2e-123", "E2E_REF=dogsout://e2e/misc/E2E_DIRECT", "E2E_OP=op://dev/a/b", ""].join("\n"),
+		["E2E_DIRECT=hello-e2e-123", "E2E_REF=dogsout://e2e/misc/e2e_direct", "E2E_OP=op://dev/a/b", ""].join("\n"),
 	);
 	const imp = await dogsout(home1, ["import-env", fixture, "--vault", "e2e", "--item", "misc"]);
 	check(
@@ -84,7 +84,7 @@ try {
 	const exp = await dogsout(home1, ["export", "--format", "env-ref"]);
 	check(
 		exp.code === 0 &&
-			exp.out.includes("E2E_REF=dogsout://e2e/misc/E2E_DIRECT") &&
+			exp.out.includes("E2E_REF=dogsout://e2e/misc/e2e_direct") &&
 			!exp.out.includes("op://") &&
 			!exp.out.includes("hello-e2e-123"),
 		"export contains refs, not values",

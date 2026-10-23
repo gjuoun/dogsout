@@ -18,6 +18,7 @@ export * from "./resolve.ts";
 export * from "./session/grants.ts";
 export * from "./session/session.ts";
 export * from "./store.ts";
+export * from "./tree.ts";
 export * from "./vault/envelope.ts";
 export * from "./vault/io.ts";
 export * from "./vault/se.ts";

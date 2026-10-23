@@ -76,17 +76,36 @@ dogsout migrate             # rewrite addresses + move ~/.config/junethekey -> ~
 ### Vault basics
 
 Values live at `dogsout://vault/item/field` addresses; a dotted path digs into JSON field values.
+Every segment is a lowercase token — `[a-z0-9_-]`, never a dot (the dot is the separator) — which is
+what keeps an address unambiguous as storage, as a glob, and as tree input. Input sugar follows jq:
+`dogsout://dev/zai/api_key`, `.dev.zai.api_key` and `dev.zai.api_key` are the same address, and the
+sugar is expanded in the CLI only (stored addresses stay canonical).
 
 ```bash
-echo "sk-..." | dogsout set dogsout://dev/zai/api_key   # value via stdin, never as a CLI argument
-dogsout get dogsout://dev/zai/api_key                    # masked digest (sha256:…, length)
-dogsout get dogsout://dev/zai/api_key --reveal           # actual value — explicit plaintext only
-dogsout ls                                           # list field addresses, no values
+echo "sk-..." | dogsout set .dev.zai.api_key             # value via stdin, never as a CLI argument
+dogsout get .dev.zai.api_key                            # masked digest (sha256:…, length)
+dogsout get .dev.zai.api_key --reveal                   # actual value — explicit plaintext only
+dogsout alias ZAI_API_KEY .dev.zai.api_key               # env-friendly name -> one address
 dogsout rm dogsout://dev/zai/api_key                     # remove one field
-
-dogsout alias ZAI_API_KEY dogsout://dev/zai/api_key      # env-friendly name -> one address
 dogsout get ZAI_API_KEY                              # aliases read like addresses
 ```
+
+A value lives on a leaf: `set .dev.zai` (an item) and `set .dev.zai.api_key.extra` (a subpath) are
+refused rather than writing something the caller did not ask for. A subpath key containing a dot is
+written in brackets: `dogsout get '.gcp.sa.key["client.email"]'`.
+
+`ls` and `tree` take the same input plus globs — `a.b.*` is one level, `a.b.**` is the subtree:
+
+```bash
+dogsout ls                  # every field address, no values
+dogsout ls dev.gh.*         # the fields of one item
+dogsout ls dev.**           # everything in the dev vault
+dogsout tree dev            # JSON trie for agents: leaves carry metadata, never values
+```
+
+`tree` output is a nested map down to one leaf per field; a leaf is
+`{"address": …, "value_hash": "sha256:…", "bytes": N, "updated_at": …}`. Addresses stored before
+the charset rule are listed by `ls` (on stderr) and by `dogsout migrate` — reported, never rewritten.
 
 Rotation is alias-native: `set` the same address again and every alias/run follows — no copies to drift.
 
@@ -111,6 +130,10 @@ printf 'DEEPSEEK_API_KEY=sk-x\nZAI=dogsout://dev/zai/api_key\n' > keys.env
 dogsout import-env keys.env --vault dev --item misc
 dogsout export --format env-ref    # refs only, safe to commit
 ```
+
+A literal key lands under its lowercased field name (`DEEPSEEK_API_KEY` → `deepseek_api_key`): env
+names are UPPER_SNAKE, address segments are lowercase. A key that cannot become a segment, or two
+keys that fold onto one field, abort the whole import — nothing is written.
 
 ### Policy: allow / ask / deny
 

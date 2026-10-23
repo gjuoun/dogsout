@@ -61,9 +61,12 @@ export function unwrapRunnerOutput(v: unknown): unknown {
 export interface Io {
 	stdin: () => Promise<string>;
 	stdout: (line: string) => void;
+	/** Warnings (legacy data, advisories) go here so stdout stays machine-readable. */
+	stderr?: (line: string) => void;
 }
 
 export const defaultIo: Io = {
 	stdin: async () => await new Response(Bun.stdin).text(),
 	stdout: (l) => console.log(l),
+	stderr: (l) => console.error(l),
 };

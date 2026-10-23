@@ -1,6 +1,7 @@
-import { formatAddress, nowIso, openData, parseAddress, saveData } from "@dogsout/core";
+import { formatAddress, nowIso, openData, saveData } from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
+import { desugarAddress } from "./address-input.ts";
 import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
@@ -10,12 +11,20 @@ export function setCommand(io: Io = defaultIo) {
 			name: "set",
 			description: "store a secret from stdin at a dogsout:// address",
 			args: {
-				addr: positional({ type: string, displayName: "dogsout://vault/item/field" }),
+				addr: positional({ type: string, displayName: "dogsout://vault/item/field | .vault.item.field" }),
 				stdin: flag({ long: "stdin", description: "value is read from stdin (default behavior)" }),
 			},
 			handler: async ({ addr }): Promise<Result<string, string>> => {
-				const parsed = parseAddress(addr);
+				const parsed = desugarAddress(addr, { strict: true });
 				if (parsed.isErr()) return err(parsed.error);
+				// A leaf holds a value and nothing else: writing `field.sub` would make `field` both a value
+				// and a branch, and it previously stored the value at `field` while the user said `field.sub`.
+				const { subpath } = parsed.value;
+				if (subpath.length > 0) {
+					return fail(
+						`set stores one whole value — "${addr}" ends in a subpath; drop .${subpath.join(".")} (subpaths are read-only via get)`,
+					);
+				}
 				const value = (await io.stdin()).replace(/\n$/, "");
 				if (value.length === 0) return fail("empty value refused");
 				const ctxR = ctxFromEnv();

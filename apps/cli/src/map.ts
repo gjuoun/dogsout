@@ -1,6 +1,7 @@
-import { dogsoutHome, loadConfig, writeConfig } from "@dogsout/core";
+import { dogsoutHome, formatAddress, loadConfig, writeConfig } from "@dogsout/core";
 import { command, flag, optional, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
+import { desugarAddress } from "./address-input.ts";
 import { runDogsout, withMeta } from "./cmd.ts";
 
 /**
@@ -31,10 +32,19 @@ export function mapCommand() {
 					if (w.isErr()) return err(w.error);
 					return ok("removed map " + slot);
 				}
-				cfg.value.maps[slot] = target as string;
+				// A target that is an address goes through the same validation/sugar as every other
+				// address input and is stored canonically; anything else is another slot name.
+				const raw = target as string;
+				let value = raw;
+				if (raw.startsWith("dogsout://") || raw.startsWith(".")) {
+					const parsed = desugarAddress(raw, { strict: true });
+					if (parsed.isErr()) return err(parsed.error);
+					value = formatAddress(parsed.value);
+				}
+				cfg.value.maps[slot] = value;
 				const w = await writeConfig(home, cfg.value);
 				if (w.isErr()) return err(w.error);
-				return ok(slot + " -> " + target);
+				return ok(slot + " -> " + value);
 			},
 		}),
 		{ reads: [], writes: ["config"], env: ["DOGSOUT_HOME"] },

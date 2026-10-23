@@ -1,6 +1,7 @@
-import { nowIso, openData, parseAddress, saveData } from "@dogsout/core";
+import { nowIso, openData, saveData } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
+import { desugarAddress } from "./address-input.ts";
 import { fail, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
@@ -9,9 +10,11 @@ export function rmCommand() {
 		command({
 			name: "rm",
 			description: "remove one field",
-			args: { addr: positional({ type: string, displayName: "dogsout://vault/item/field" }) },
+			args: {
+				addr: positional({ type: string, displayName: "dogsout://vault/item/field | .vault.item.field" }),
+			},
 			handler: async ({ addr }): Promise<Result<string, string>> => {
-				const parsed = parseAddress(addr);
+				const parsed = desugarAddress(addr);
 				if (parsed.isErr()) return err(parsed.error);
 				if (parsed.value.subpath.length > 0) return fail("rm targets a field, not a subpath");
 				const ctxR = ctxFromEnv();

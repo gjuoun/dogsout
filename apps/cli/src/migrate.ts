@@ -1,6 +1,7 @@
 import {
 	applyMigration,
 	dogsoutHome,
+	groupViolations,
 	legacyHome,
 	type MigrationPlan,
 	planMigration,
@@ -16,6 +17,20 @@ import { runDogsout, withMeta } from "./cmd.ts";
  * ~/.config/dogsout. `--dry-run` prints the plan and touches nothing; a second run
  * reports zero rewrites and writes no file (idempotent).
  */
+/**
+ * Addresses that violate the segment charset are listed, never fixed: renaming a stored address is
+ * a decision for its owner. Only what this command can read in plaintext is checked — the vault is
+ * never opened, so `ls` reports the vault-side half.
+ */
+function describeViolations(p: MigrationPlan): string[] {
+	const groups = groupViolations(p.violations.map((v) => v.violation));
+	if (groups.length === 0) return [];
+	const sourceOf = new Map(p.violations.map((v) => [v.violation.address, v.source]));
+	const lines = [`charset: ${groups.length} stored address(es) violate [a-z0-9_-] (listed only, not rewritten)`];
+	for (const g of groups) lines.push(`  ${sourceOf.get(g.address) ?? ""}: ${g.address} (${g.segments.join(", ")})`);
+	return lines;
+}
+
 function describePlan(p: MigrationPlan): string {
 	const storage: Record<MigrationPlan["storage"]["action"], string> = {
 		move: `move ${p.storage.from} -> ${p.storage.to}`,
@@ -32,6 +47,7 @@ function describePlan(p: MigrationPlan): string {
 		lines.push(`${f.path}: ${f.rewrites} address(es)${f.sample ? ` (e.g. ${f.sample})` : ""}`);
 	}
 	lines.push(`total: ${p.totalRewrites} rewrites`);
+	lines.push(...describeViolations(p));
 	return lines.join("\n");
 }
 
@@ -66,7 +82,9 @@ export function migrateCommand() {
 				if (applied.isErr()) return err(applied.error);
 				const r = applied.value;
 				const moved = r.storage === "move" ? `, storage moved ${r.from} -> ${r.to}` : "";
-				return ok(`migrated: ${r.rewrites} addresses in ${r.filesWritten} file(s)${moved}`);
+				const charset = describeViolations(plan);
+				const suffix = charset.length > 0 ? `\n${charset.join("\n")}` : "";
+				return ok(`migrated: ${r.rewrites} addresses in ${r.filesWritten} file(s)${moved}${suffix}`);
 			},
 		}),
 		{ reads: ["config", "grants"], writes: ["config", "grants"], env: ["DOGSOUT_HOME"] },

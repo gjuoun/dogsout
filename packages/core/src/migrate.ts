@@ -3,6 +3,7 @@ import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { type Config, type GrantsFile, parseConfig, parseGrantsFile } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
+import { type AddressViolation, scanAddress } from "./address.ts";
 import { configPath, dogsoutHome, grantsPath, legacyHome } from "./paths.ts";
 import { saveGrants } from "./session/grants.ts";
 import { writeConfig } from "./store.ts";
@@ -36,6 +37,17 @@ export interface FilePlan {
 
 export type StorageAction = "move" | "already-migrated" | "explicit-home" | "none";
 
+/**
+ * A stored address whose segments predate the [a-z0-9_-] charset. Reported only: the
+ * migration rewrites the scheme, never a name. The vault half of this report belongs to `ls`,
+ * because this command never opens the vault.
+ */
+export interface ViolationReport {
+	/** File the address lives in (config.json / grants.json). */
+	source: string;
+	violation: AddressViolation;
+}
+
 export interface MigrationPlan {
 	home: string;
 	legacyHome: string;
@@ -45,6 +57,8 @@ export interface MigrationPlan {
 	/** Rewritten documents, carried so apply writes exactly what dry-run described. */
 	config: Config | null;
 	grants: GrantsFile | null;
+	/** Charset violations visible in the plaintext address files — listed, never rewritten. */
+	violations: ViolationReport[];
 }
 
 function isJson(v: unknown): v is Json {
@@ -170,7 +184,18 @@ export async function planMigration(opts: PlanOptions = {}): Promise<Result<Migr
 		files.push({ path: grantPath, rewrites: 0, sample: null, exists: false });
 	}
 
-	return ok({ home, legacyHome: legacy, storage, files, totalRewrites, config, grants });
+	const violations: ViolationReport[] = [];
+	const collect = (source: string, address: string) => {
+		for (const violation of scanAddress(address)) violations.push({ source, violation });
+	};
+	if (config) {
+		for (const address of Object.values(config.aliases)) collect(cfgPath, address);
+		for (const address of Object.values(config.maps)) collect(cfgPath, address);
+		for (const rule of config.rules ?? []) collect(cfgPath, rule.resource);
+	}
+	if (grants) for (const grant of grants.grants) collect(grantPath, grant.address);
+
+	return ok({ home, legacyHome: legacy, storage, files, totalRewrites, config, grants, violations });
 }
 
 export interface MigrationResult {
