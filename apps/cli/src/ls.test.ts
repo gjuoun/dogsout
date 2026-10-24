@@ -112,9 +112,7 @@ describe("dogsout ls output modes", () => {
 
 	test("a tty prints the connector tree, human-only", async () => {
 		const r = await runLs([], ttyIo);
-		expect(r._unsafeUnwrap()).toBe(
-			[".dev", "│ └─ gh", "│   ├─ pat", "│   └─ token", ".prod", "  └─ aws", "    └─ key"].join("\n"),
-		);
+		expect(r._unsafeUnwrap()).toBe([".dev", "│ └─ gh · pat, token", ".prod", "  └─ aws · key"].join("\n"));
 	});
 
 	test("every address appears as one connector leaf in the tty tree", async () => {
@@ -123,12 +121,13 @@ describe("dogsout ls output modes", () => {
 		// each address's field (deepest segment) shows up exactly once as a connector leaf
 		for (const addr of piped) {
 			const field = addr.split("/").pop() ?? "";
-			expect(terminal.filter((l) => l.includes("─ ") && l.endsWith(field)).length).toBe(1);
+			const item = addr.split("/").slice(-2)[0] ?? "";
+			expect(terminal.some((l) => l.includes(`·`) && l.includes(item) && l.includes(field))).toBe(true);
 		}
 	});
 
 	test("a glob narrows the tty tree without losing the vault root", async () => {
 		const r = await runLs(["dev.gh.*"], ttyIo);
-		expect(r._unsafeUnwrap()).toBe(".dev\n  └─ gh\n    ├─ pat\n    └─ token");
+		expect(r._unsafeUnwrap()).toBe(".dev\n  └─ gh · pat, token");
 	});
 });

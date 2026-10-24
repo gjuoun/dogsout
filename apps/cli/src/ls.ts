@@ -86,22 +86,22 @@ function ttyOf(io: Io): boolean {
 
 /** vault -> item -> field, dot-prefixed and indented — readable, not parseable (use the pipe view). */
 function asTree(entries: readonly PathEntry[]): string {
-	// tree(1)-style connectors, compact: one-dash branches, 2-char guides, no dot on children
-	// (the dot is a path separator — redundant inside a tree).
-	const conn = (prefix: string, last: boolean) => `${prefix}${last ? "└─ " : "├─ "}`;
+	// compact tree: fields fold inline onto their item line (leaves are often just 1-2);
+	// a bare item keeps its own line so structure never collapses.
+	const inline = (fields: string[]) => {
+		const shown = fields.slice(0, 3).join(", ");
+		return fields.length > 3 ? `${shown} +${fields.length - 3}` : shown;
+	};
 	const lines: string[] = [];
 	const vaults = [...groupBy(entries).entries()];
 	vaults.forEach(([vault, items], vi) => {
-		const vGuide = vi === vaults.length - 1 ? "  " : "│ ";
+		const vLast = vi === vaults.length - 1;
 		lines.push(`.${vault}`);
 		const itemEntries = Object.entries(items);
 		itemEntries.forEach(([item, fields], ii) => {
 			const iLast = ii === itemEntries.length - 1;
-			lines.push(conn(vGuide, iLast) + item);
-			const fGuide = vGuide + (iLast ? "  " : "│ ");
-			fields.forEach((field, fi) => {
-				lines.push(conn(fGuide, fi === fields.length - 1) + field);
-			});
+			const branch = vLast ? (iLast ? "  └─ " : "  ├─ ") : iLast ? "│ └─ " : "│ ├─ ";
+			lines.push(`${branch}${item}${fields.length > 0 ? ` · ${inline(fields)}` : ""}`);
 		});
 	});
 	return lines.join("\n");
