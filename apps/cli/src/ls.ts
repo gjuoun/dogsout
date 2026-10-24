@@ -94,13 +94,13 @@ function asTree(entries: readonly PathEntry[]): string {
 	};
 	const lines: string[] = [];
 	const vaults = [...groupBy(entries).entries()];
-	vaults.forEach(([vault, items], vi) => {
-		const vLast = vi === vaults.length - 1;
+	vaults.forEach(([vault, items]) => {
 		lines.push(`.${vault}`);
 		const itemEntries = Object.entries(items);
 		itemEntries.forEach(([item, fields], ii) => {
 			const iLast = ii === itemEntries.length - 1;
-			const branch = vLast ? (iLast ? "  └─ " : "  ├─ ") : iLast ? "│ └─ " : "│ ├─ ";
+			// no vertical guides: the dot-prefix on vault lines already separates blocks
+			const branch = iLast ? "└─ " : "├─ ";
 			lines.push(`${branch}${item}${fields.length > 0 ? ` · ${inline(fields)}` : ""}`);
 		});
 	});
