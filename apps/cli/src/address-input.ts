@@ -58,7 +58,18 @@ function tokenize(body: string): Result<string[], string> {
 			} catch {
 				return err(`malformed bracket segment in "${body}" — quote the key as JSON, e.g. ["client.email"]`);
 			}
-			if (typeof key !== "string" || key.length === 0) return err(`bracket segment must be a non-empty string`);
+			if (typeof key === "number") {
+				// jq's array index: .hosts[0] / .hosts.[0] — the one standard form for a list element
+				if (!Number.isSafeInteger(key) || key < 0) {
+					return err(`bracket index in "${body}" must be a non-negative integer, e.g. [0]`);
+				}
+				segments.push(String(key));
+				i = end;
+				continue;
+			}
+			if (typeof key !== "string") {
+				return err(`bracket segment must be a string key or an index — e.g. ["client.email"] or [0]`);
+			}
 			segments.push(key);
 			i = end;
 			continue;

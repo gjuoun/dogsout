@@ -8,6 +8,7 @@
         "@biomejs/biome": "^2.0.0",
         "@hey-api/openapi-ts": "0.99.0",
         "@types/bun": "latest",
+        "hono": "^4.13.13",
         "turbo": "^2.11.0",
         "typescript": "^5.9.0",
       },

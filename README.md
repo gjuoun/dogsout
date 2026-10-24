@@ -75,7 +75,8 @@ dogsout migrate             # rewrite addresses + move ~/.config/junethekey -> ~
 
 ### Vault basics
 
-Values live at `dogsout://vault/item/field` addresses; a dotted path digs into JSON field values.
+Values live at `dogsout://vault/item/field` addresses; a dotted path digs into JSON field values, and
+a list element uses the standard jq index: `dogsout get .dev.zai.hosts.[0]`.
 Every segment is a lowercase token — `[a-z0-9_-]`, never a dot (the dot is the separator) — which is
 what keeps an address unambiguous as storage, as a glob, and as an `ls` argument. Input sugar follows jq:
 `dogsout://dev/zai/api_key`, `.dev.zai.api_key` and `dev.zai.api_key` are the same address, and the
@@ -94,20 +95,29 @@ A value lives on a leaf: `set .dev.zai` (an item) and `set .dev.zai.api_key.extr
 refused rather than writing something the caller did not ask for. A subpath key containing a dot is
 written in brackets: `dogsout get '.gcp.sa.key["client.email"]'`.
 
-`ls` takes an optional path plus globs — `a.b.*` is one level, `a.b.**` is the subtree. On a terminal
-it prints an indented tree; piped it prints one canonical address per line, which is what `grep` and
-`xargs` want:
+`ls` takes an optional path plus globs — `a.b.*` is one level, `a.b.**` is the subtree — and prints one
+listing in three views; a value is never part of any of them:
 
 ```bash
-dogsout ls                  # the vault as an indented tree (piped: one address per line)
-dogsout ls dev.gh.*         # the fields of one item
-dogsout ls dev.**           # everything in the dev vault
-dogsout ls --json dev       # JSON trie for agents: leaves carry metadata, never values
+dogsout ls                      # human: a connector tree (vaults -> items -> fields)
+dogsout ls dev.gh.config        # a JSON field keeps growing inward through its keys
+dogsout ls dev.gh.*             # the fields of one item
+dogsout ls dev.**               # everything in the dev vault
+dogsout ls --json dev           # agents: the same structure, leaves are metadata or null
+dogsout ls dev.** | xargs -n1 dogsout get   # piped: one jq dot path per leaf, feed it straight back
 ```
 
-`ls --json` is a nested map down to one leaf per field, rooted where the path pinned it; a leaf is
-`{"address": …, "value_hash": "sha256:…", "bytes": N, "updated_at": …}`. Addresses stored before
-the charset rule are listed by `ls` (on stderr) and by `dogsout migrate` — reported, never rewritten.
+- **Piped** — one jq dot path per leaf, in listing order: `.dev.gh.config.api.retry`, or
+  `["client.email"]` when a key is not an identifier. Every line is valid `get` input, so
+  `grep` / `xargs` compose without a second format.
+- **`--json`** — a nested map rooted where the path pinned it: a stored field leaf is
+  `{"address": …, "value_hash": "sha256:…", "bytes": N, "updated_at": …}`, and a node that exists
+  only inside a JSON value is `null` (structure, never the value).
+- **TTY** — the connector tree; a field holding a JSON array or scalar is one annotated leaf
+  (`hosts · array(3)`, `port · number`) and is not expanded.
+
+Addresses stored before the charset rule are listed by `ls` (on stderr) and by `dogsout migrate` —
+reported, never rewritten.
 
 Rotation is alias-native: `set` the same address again and every alias/run follows — no copies to drift.
 

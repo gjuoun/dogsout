@@ -32,6 +32,22 @@ describe("desugarAddress (jq-style input sugar)", () => {
 		expect(addr('dogsout://gcp/sa/key["a.b"].c').subpath).toEqual(["a.b", "c"]);
 	});
 
+	test("a bracket integer is the standard jq array index, with or without the leading dot", () => {
+		expect(addr(".dev.gh.list.[0]")).toMatchObject({ field: "list", subpath: ["0"] });
+		expect(addr(".dev.gh.list[2]")).toMatchObject({ field: "list", subpath: ["2"] });
+		// a quoted digit stays a string key — the two spellings are both legal subpath segments
+		expect(addr('.dev.gh.map["0"]')).toMatchObject({ field: "map", subpath: ["0"] });
+		// JSON allows an empty key, so a printed path for one must read back
+		expect(addr('.dev.gh.map[""]')).toMatchObject({ field: "map", subpath: [""] });
+	});
+
+	test("a bracket that is neither a string key nor a non-negative integer is refused", () => {
+		for (const bad of [".dev.gh.list[-1]", ".dev.gh.list[1.5]", ".dev.gh.list[0x1]", ".dev.gh.list[]"]) {
+			const r = desugarAddress(bad);
+			expect(r.isErr()).toBe(true);
+		}
+	});
+
 	test("a single word is refused with the full address form, never guessed", () => {
 		const r = desugarAddress("gh");
 		expect(r.isErr()).toBe(true);

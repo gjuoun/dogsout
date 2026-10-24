@@ -1,11 +1,9 @@
-import type { FieldMeta, TreeNode, VaultData } from "@dogsout/type-contracts";
-import { err, ok, type Result } from "neverthrow";
-
+import type { FieldMeta, VaultData } from "@dogsout/type-contracts";
 /**
  * One stored field as a path — the shape a SQLite store would keep with `path` as primary key.
  * Today every entry is [vault, item, field]; the type stays variable-depth so a store that keys on
  * a joined path can be checked against the same value/branch invariant. The plaintext value never
- * leaves this module except through `maskHash`, so tree output is metadata only (PRD red line 1).
+ * leaves this module except through `maskHash`, so output is metadata only (PRD red line 1).
  */
 export interface PathEntry {
 	path: readonly string[];
@@ -79,51 +77,4 @@ export async function fieldMeta(entry: PathEntry): Promise<FieldMeta> {
 		bytes: Buffer.byteLength(entry.value, "utf8"),
 		updated_at: entry.updated_at,
 	};
-}
-
-function isFieldMeta(node: FieldMeta | TreeNode): node is FieldMeta {
-	return typeof (node as FieldMeta).value_hash === "string";
-}
-
-function label(path: readonly string[]): string {
-	return path.join("/");
-}
-
-/**
- * Fold path entries into a trie, leaves carrying metadata. The invariant checked here is the one
- * the address grammar promises: a node holds either a value or children. The current
- * vault -> item -> field model cannot express a violation, a path-keyed SQLite table can, so this
- * is where such a row gets rejected instead of silently overwriting a subtree.
- */
-export async function buildTree(entries: readonly PathEntry[]): Promise<Result<TreeNode, string>> {
-	const root: TreeNode = {};
-	for (const entry of entries) {
-		let node = root;
-		for (let i = 0; i < entry.path.length; i++) {
-			const seg = entry.path[i] as string;
-			const atLeaf = i === entry.path.length - 1;
-			const existing = node[seg];
-			if (atLeaf) {
-				if (existing !== undefined) {
-					if (!isFieldMeta(existing)) return err(`${label(entry.path)} is both a value and a branch`);
-					return err(`duplicate path: ${entry.address}`);
-				}
-				node[seg] = await fieldMeta(entry);
-				continue;
-			}
-			if (existing === undefined) {
-				const child: TreeNode = {};
-				node[seg] = child;
-				node = child;
-				continue;
-			}
-			if (isFieldMeta(existing)) {
-				return err(
-					`${label(entry.path.slice(0, i + 1))} is both a value and a branch (path prefix of ${entry.address})`,
-				);
-			}
-			node = existing;
-		}
-	}
-	return ok(root);
 }

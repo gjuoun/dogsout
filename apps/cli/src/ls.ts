@@ -1,6 +1,8 @@
 import {
-	buildTree,
+	buildListing,
 	groupViolations,
+	type ListingNode,
+	listingToTrie,
 	openData,
 	type PathEntry,
 	scanAddress,
@@ -13,29 +15,32 @@ import { expandPattern } from "./address-input.ts";
 import { defaultIo, fail, type Io, runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
-/** How many leading segments the pattern pinned before its first glob (the JSON trie's root). */
+/** How many leading segments the pattern pinned before its first glob (the listing's root). */
 function pinnedDepth(pattern: readonly string[]): number {
 	const glob = pattern.findIndex((seg) => seg === "*" || seg === "**");
 	return glob === -1 ? pattern.length : glob;
 }
 
 /**
- * `dogsout ls [path] [--json]` — field addresses without values, three views of one listing:
- * a TTY gets an indented tree, a pipe gets one canonical address per line (grep/xargs), and
- * `--json` gets the metadata trie agents consume. `*` / `**` glob in every view.
+ * `dogsout ls [path] [--json]` — one listing, three views, never a value: a TTY gets a connector
+ * tree that grows into JSON objects, a pipe gets one jq dot path per leaf (feed it to `get`),
+ * and `--json` gets the same structure with metadata leaves / nulls. `*` / `**` glob in every view.
  */
 export function lsCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "ls",
 			description:
-				"list field addresses without revealing values (tree on a TTY, one address per line when piped; --json for metadata)",
+				"list field paths without revealing values (tree on a TTY, one jq path per line when piped; --json for the structure)",
 			args: {
 				path: positional({
 					type: optional(string),
 					displayName: "[vault.item.field | .vault.item.* | .vault.**]",
 				}),
-				json: flag({ long: "json", description: "machine-readable trie: leaves carry metadata, never values" }),
+				json: flag({
+					long: "json",
+					description: "machine-readable structure: stored fields carry metadata, a JSON object grows with null leaves",
+				}),
 			},
 			handler: async ({ path, json }): Promise<Result<string, string>> => {
 				const ctxR = ctxFromEnv();
@@ -48,23 +53,20 @@ export function lsCommand(io: Io = defaultIo) {
 				if (selected.isErr()) return err(selected.error);
 				const { entries, depth } = selected.value;
 				reportViolations(io, store.list());
-				// The trie is rooted where the pattern pinned it, so `ls --json dev.gh` is that item, not the vault.
-				if (json) {
-					const scoped = entries.map((entry) => ({ ...entry, path: entry.path.slice(depth) }));
-					const built = await buildTree(scoped);
-					if (built.isErr()) return err(built.error);
-					return ok(JSON.stringify(built.value, null, 2));
-				}
-				// TTY: indented tree (human view); pipe/redirect: one canonical address per line.
-				const text = ttyOf(io) ? asTree(entries) : entries.map((e) => e.address).join("\n");
-				return ok(text);
+				// The listing is rooted where the pattern pinned it: no path -> vaults, `dev` -> that vault's items,
+				// `.dev.gh` -> that item's fields, `.dev.gh.field` -> the field's own JSON structure.
+				const built = await buildListing(entries, depth);
+				if (built.isErr()) return err(built.error);
+				const roots = built.value;
+				if (json) return ok(JSON.stringify(listingToTrie(roots), null, 2));
+				return ok(ttyOf(io) ? asTree(roots, depth === 0) : leavesOf(roots).join("\n"));
 			},
 		}),
 		{ reads: ["vault"], writes: [], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
-/** The listing plus where its JSON trie is rooted (0 = vaults, 2 = the field itself). */
+/** The listing plus where it is rooted (0 = vaults, 2 = the field itself). */
 interface Selection {
 	entries: PathEntry[];
 	depth: number;
@@ -76,7 +78,7 @@ function selectFor(path: string, store: ReturnType<typeof vaultStore>): Result<S
 	if (parsed.isErr()) return err(parsed.error);
 	const entries = selectEntries(store, parsed.value.pattern);
 	if (entries.length === 0 && parsed.value.literalField) return fail(`not found: ${parsed.value.source}`);
-	// A full 3-segment field address pins the leaf itself: its own key is the trie root.
+	// A full 3-segment field address pins the leaf itself: its own key is the listing root.
 	return ok({ entries, depth: Math.min(pinnedDepth(parsed.value.pattern), 2) });
 }
 
@@ -84,39 +86,35 @@ function ttyOf(io: Io): boolean {
 	return io.tty ?? process.stdout.isTTY === true;
 }
 
-/** vault -> item -> field, dot-prefixed and indented — readable, not parseable (use the pipe view). */
-function asTree(entries: readonly PathEntry[]): string {
-	// compact tree: fields fold inline onto their item line (leaves are often just 1-2);
-	// a bare item keeps its own line so structure never collapses.
-	const inline = (fields: string[]) => {
-		const shown = fields.slice(0, 3).join(", ");
-		return fields.length > 3 ? `${shown} +${fields.length - 3}` : shown;
-	};
+/**
+ * Human view: a connector tree rooted where the path pinned it (vaults keep their leading dot —
+ * that is the jq root). Only a stored field holding non-object JSON carries a type note; keys
+ * inside a JSON value never do, so the shape reads like the value's own structure.
+ */
+function asTree(roots: readonly ListingNode[], dotRoots: boolean): string {
 	const lines: string[] = [];
-	const vaults = [...groupBy(entries).entries()];
-	vaults.forEach(([vault, items]) => {
-		lines.push(`.${vault}`);
-		const itemEntries = Object.entries(items);
-		itemEntries.forEach(([item, fields], ii) => {
-			const iLast = ii === itemEntries.length - 1;
-			// no vertical guides: the dot-prefix on vault lines already separates blocks
-			const branch = iLast ? "└─ " : "├─ ";
-			lines.push(`${branch}${item}${fields.length > 0 ? ` · ${inline(fields)}` : ""}`);
+	const walk = (nodes: readonly ListingNode[], prefix: string) => {
+		nodes.forEach((node, index) => {
+			const branch = index === nodes.length - 1 ? "└─ " : "├─ ";
+			lines.push(`${prefix}${branch}${node.name}${note(node)}`);
+			walk(node.children, `${prefix}   `);
 		});
-	});
+	};
+	for (const root of roots) {
+		lines.push(`${dotRoots ? "." : ""}${root.name}${note(root)}`);
+		walk(root.children, "");
+	}
 	return lines.join("\n");
 }
 
-function groupBy(entries: readonly PathEntry[]): Map<string, Record<string, string[]>> {
-	const summary = new Map<string, Record<string, string[]>>();
-	for (const entry of entries) {
-		const [vault, item, field] = entry.path as [string, string, string];
-		const items = summary.get(vault) ?? {};
-		items[item] ??= [];
-		(items[item] as string[]).push(field);
-		summary.set(vault, items);
-	}
-	return summary;
+/** The type note a stored field carries when its value is array / scalar JSON (never a value). */
+function note(node: ListingNode): string {
+	return node.annotation === undefined ? "" : ` · ${node.annotation}`;
+}
+
+/** Machine view: every leaf is a jq dot path, in listing order — `xargs -n1 dogsout get` feeds back. */
+function leavesOf(nodes: readonly ListingNode[]): string[] {
+	return nodes.flatMap((node) => (node.children.length === 0 ? [node.jq] : leavesOf(node.children)));
 }
 
 /**

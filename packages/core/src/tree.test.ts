@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { type FieldMeta, parseTreeNode, type TreeNode, type VaultData } from "@dogsout/type-contracts";
-import { buildTree, fieldMeta, maskHash, matchPattern, type PathEntry, selectEntries, vaultStore } from "./tree.ts";
+import type { VaultData } from "@dogsout/type-contracts";
+import { fieldMeta, maskHash, matchPattern, type PathEntry, selectEntries, vaultStore } from "./tree.ts";
 
 const data = (): VaultData => ({
 	version: 1,
@@ -12,12 +12,6 @@ const data = (): VaultData => ({
 		prod: { aws: { fields: { key: "AKIA-fake" }, updated_at: "2026-10-22T09:00:00.000Z" } },
 	},
 });
-
-const leaf = (tree: TreeNode, ...segments: string[]): FieldMeta => {
-	let cur: FieldMeta | TreeNode = tree;
-	for (const seg of segments) cur = (cur as TreeNode)[seg] as FieldMeta | TreeNode;
-	return cur as FieldMeta;
-};
 
 describe("vaultStore (the path-keyed seam)", () => {
 	test("exposes one entry per field, keyed by [vault, item, field] and sorted by address", () => {
@@ -75,34 +69,5 @@ describe("leaf metadata (values never leave)", () => {
 			bytes: "ghp_secret_value".length,
 			updated_at: "2026-10-23T10:00:00.000Z",
 		});
-	});
-});
-
-describe("buildTree", () => {
-	test("nests vault -> item -> field with metadata leaves", async () => {
-		const tree = (await buildTree(vaultStore(data()).list()))._unsafeUnwrap();
-		const pat = leaf(tree, "dev", "gh", "pat");
-		expect(pat.address).toBe("dogsout://dev/gh/pat");
-		expect(pat.bytes).toBe("ghp_secret_value".length);
-		expect(Object.keys(pat).sort()).toEqual(["address", "bytes", "updated_at", "value_hash"]);
-		expect(Object.keys(tree).sort()).toEqual(["dev", "prod"]);
-	});
-
-	test("the serialized tree is valid per the contract and carries no plaintext", async () => {
-		const tree = (await buildTree(vaultStore(data()).list()))._unsafeUnwrap();
-		const json = JSON.stringify(tree);
-		expect(json).not.toContain("ghp_secret_value");
-		expect(json).not.toContain("sk-live-1");
-		expect(parseTreeNode(JSON.parse(json)).ok).toBe(true);
-	});
-
-	test("refuses a path that is both a value and a branch", async () => {
-		const entries: PathEntry[] = [
-			{ path: ["dev", "gh"], address: "dogsout://dev/gh", value: "x", updated_at: "t" },
-			{ path: ["dev", "gh", "pat"], address: "dogsout://dev/gh/pat", value: "y", updated_at: "t" },
-		];
-		const r = await buildTree(entries);
-		expect(r.isErr()).toBe(true);
-		if (r.isErr()) expect(r.error).toContain("is both a value and a branch");
 	});
 });

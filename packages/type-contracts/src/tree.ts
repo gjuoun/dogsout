@@ -19,12 +19,14 @@ export type FieldMeta = z.infer<typeof FieldMetaSchema>;
 
 /**
  * A node of the vault trie: segment name -> child node, down to `FieldMeta` leaves. A node is
- * either a branch (a map of segments) or a leaf (metadata) — never both.
+ * either a branch (a map of segments) or a leaf (metadata) — never both. `null` is the leaf of a
+ * node that exists only *inside* a JSON value (`ls --json` prints the structure of a JSON field,
+ * never a value), so such a node has no address and no metadata of its own.
  */
-export type TreeNode = { [segment: string]: FieldMeta | TreeNode };
+export type TreeNode = { [segment: string]: FieldMeta | null | TreeNode };
 
 export const TreeNodeSchema: z.ZodType<TreeNode> = z.lazy(() =>
-	z.record(z.string(), z.union([FieldMetaSchema, TreeNodeSchema])),
+	z.record(z.string(), z.union([FieldMetaSchema, z.null(), TreeNodeSchema])),
 );
 
 export function parseTreeNode(raw: unknown): { ok: true; tree: TreeNode } | { ok: false; error: string } {

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { FieldMeta, TreeNode } from "@dogsout/type-contracts";
 import type { Io } from "./cmd.ts";
+import { runGet } from "./get.ts";
 import { runInit } from "./init.ts";
 import { runLs } from "./ls.ts";
 import { runSet } from "./set.ts";
@@ -39,12 +40,12 @@ const jsonOf = async (argv: string[]): Promise<TreeNode> => {
 };
 
 const leaf = (tree: TreeNode, ...segments: string[]): FieldMeta => {
-	let cur: FieldMeta | TreeNode = tree;
-	for (const seg of segments) cur = (cur as TreeNode)[seg] as FieldMeta | TreeNode;
+	let cur: FieldMeta | TreeNode | null = tree;
+	for (const seg of segments) cur = (cur as TreeNode)[seg] as FieldMeta | TreeNode | null;
 	return cur as FieldMeta;
 };
 
-describe("dogsout ls --json (the retired tree view)", () => {
+describe("dogsout ls --json (the structure view)", () => {
 	test("the root trie nests vault -> item -> field", async () => {
 		const tree = await jsonOf([]);
 		expect(Object.keys(tree).sort()).toEqual(["dev", "prod"]);
@@ -101,33 +102,139 @@ describe("dogsout ls --json (the retired tree view)", () => {
 });
 
 describe("dogsout ls output modes", () => {
-	test("a pipe prints one canonical address per line", async () => {
+	test("a pipe prints one jq dot path per leaf", async () => {
 		const r = await runLs([], pipeIo);
-		expect(r._unsafeUnwrap().split("\n")).toEqual([
-			"dogsout://dev/gh/pat",
-			"dogsout://dev/gh/token",
-			"dogsout://prod/aws/key",
-		]);
+		expect(r._unsafeUnwrap().split("\n")).toEqual([".dev.gh.pat", ".dev.gh.token", ".prod.aws.key"]);
 	});
 
 	test("a tty prints the connector tree, human-only", async () => {
 		const r = await runLs([], ttyIo);
-		expect(r._unsafeUnwrap()).toBe([".dev", "└─ gh · pat, token", ".prod", "└─ aws · key"].join("\n"));
+		expect(r._unsafeUnwrap()).toBe(
+			[".dev", "└─ gh", "   ├─ pat", "   └─ token", ".prod", "└─ aws", "   └─ key"].join("\n"),
+		);
 	});
 
-	test("every address appears as one connector leaf in the tty tree", async () => {
+	test("every piped path appears as one connector leaf in the tty tree", async () => {
 		const piped = (await runLs([], pipeIo))._unsafeUnwrap().split("\n");
 		const terminal = (await runLs([], ttyIo))._unsafeUnwrap().split("\n");
-		// each address's field (deepest segment) shows up exactly once as a connector leaf
-		for (const addr of piped) {
-			const field = addr.split("/").pop() ?? "";
-			const item = addr.split("/").slice(-2)[0] ?? "";
-			expect(terminal.some((l) => l.includes(`·`) && l.includes(item) && l.includes(field))).toBe(true);
+		for (const path of piped) {
+			const field = path.split(".").pop() ?? "";
+			const bare = terminal.map((l) => l.replace(/^[│├└─\s]+/, ""));
+			expect(bare).toContain(field);
 		}
 	});
 
-	test("a glob narrows the tty tree without losing the vault root", async () => {
+	test("a glob narrows the tty tree to the pinned depth", async () => {
 		const r = await runLs(["dev.gh.*"], ttyIo);
-		expect(r._unsafeUnwrap()).toBe(".dev\n└─ gh · pat, token");
+		expect(r._unsafeUnwrap()).toBe("pat\ntoken");
+	});
+});
+
+describe("dogsout ls — JSON drilling, three views ", () => {
+	const CONFIG = '{"db_host":"db.internal","db_port":5432,"api":{"retry":3,"timeout":30}}';
+	let jsonHome = "";
+
+	beforeAll(async () => {
+		jsonHome = mkdtempSync(join(tmpdir(), "dogsout-ls-drill-"));
+		process.env.DOGSOUT_HOME = jsonHome;
+		process.env.DOGSOUT_SE_HELPER = FAKE_SE;
+		await runInit([], stdinOf(""));
+		await runSet(["dogsout://dev/gh/config", "--stdin"], stdinOf(CONFIG));
+		await runSet(["dogsout://dev/gh/hosts", "--stdin"], stdinOf('["a","b"]'));
+		await runSet(["dogsout://dev/gh/meta", "--stdin"], stdinOf('{"client.email":"a@b"}'));
+		await runSet(["dogsout://dev/gh/pat", "--stdin"], stdinOf("ghp_secret_drill"));
+	});
+
+	afterAll(() => {
+		delete process.env.DOGSOUT_HOME;
+		delete process.env.DOGSOUT_SE_HELPER;
+		rmSync(jsonHome, { recursive: true, force: true });
+	});
+
+	test("tty: the tree keeps growing inward through the JSON object", async () => {
+		const r = await runLs([".dev.gh.config"], ttyIo);
+		expect(r._unsafeUnwrap()).toBe(
+			["config", "├─ db_host", "├─ db_port", "└─ api", "   ├─ retry", "   └─ timeout"].join("\n"),
+		);
+	});
+
+	test("--json: real structure with null leaves, no metadata inside a JSON field", async () => {
+		const r = await runLs(["--json", ".dev.gh.config"], pipeIo);
+		expect(r.isOk()).toBe(true);
+		if (r.isErr()) return;
+		expect(JSON.parse(r.value)).toEqual({
+			config: { db_host: null, db_port: null, api: { retry: null, timeout: null } },
+		});
+		expect(r.value).not.toContain("db.internal");
+	});
+
+	test("pipe: one jq dot path per leaf, in listing order", async () => {
+		const r = await runLs([".dev.gh.config"], pipeIo);
+		expect(r._unsafeUnwrap().split("\n")).toEqual([
+			".dev.gh.config.db_host",
+			".dev.gh.config.db_port",
+			".dev.gh.config.api.retry",
+			".dev.gh.config.api.timeout",
+		]);
+	});
+
+	test("every piped path feeds back into get as a masked digest", async () => {
+		const listed = await runLs([".dev.gh.config"], pipeIo);
+		const paths = listed._unsafeUnwrap().split("\n");
+		expect(paths.length).toBe(4);
+		for (const path of paths) {
+			const got = await runGet([path]);
+			expect(got.isOk()).toBe(true);
+			if (got.isOk()) expect(got.value.startsWith("sha256:")).toBe(true);
+		}
+	});
+
+	test("a key that is not an identifier is bracket-quoted and still feedable", async () => {
+		const listed = await runLs([".dev.gh.meta"], pipeIo);
+		expect(listed._unsafeUnwrap()).toBe('.dev.gh.meta["client.email"]');
+		const got = await runGet([listed._unsafeUnwrap()]);
+		expect(got.isOk()).toBe(true);
+	});
+
+	test("an array field is one annotated leaf, not a subtree", async () => {
+		expect((await runLs([".dev.gh.hosts"], ttyIo))._unsafeUnwrap()).toBe("hosts · array(2)");
+		expect((await runLs([".dev.gh.hosts"], pipeIo))._unsafeUnwrap()).toBe(".dev.gh.hosts");
+		const trie = await jsonOf([".dev.gh.hosts"]);
+		expect((trie.hosts as FieldMeta).address).toBe("dogsout://dev/gh/hosts");
+	});
+
+	test("the standard index form reaches an array element", async () => {
+		const got = await runGet([".dev.gh.hosts.[0]", "--reveal"]);
+		expect(got.isOk()).toBe(true);
+		if (got.isOk()) expect(got.value).toBe("a");
+		const masked = await runGet([".dev.gh.hosts.[0]"]);
+		expect(masked.isOk()).toBe(true);
+		if (masked.isOk()) expect(masked.value.startsWith("sha256:")).toBe(true);
+	});
+
+	test("a plain field leaf carries no type note", async () => {
+		expect((await runLs([".dev.gh.pat"], ttyIo))._unsafeUnwrap()).toBe("pat");
+	});
+
+	test("the whole listing mixes metadata leaves and JSON structure", async () => {
+		const trie = await jsonOf([]);
+		const dev = trie.dev as TreeNode;
+		expect(Object.keys(dev).sort()).toEqual(["gh"]);
+		const gh = dev.gh as TreeNode;
+		expect(Object.keys(gh).sort()).toEqual(["config", "hosts", "meta", "pat"]);
+		expect(gh.config).toEqual({ db_host: null, db_port: null, api: { retry: null, timeout: null } });
+		expect((gh.hosts as FieldMeta).address).toBe("dogsout://dev/gh/hosts");
+		expect((gh.pat as FieldMeta).address).toBe("dogsout://dev/gh/pat");
+	});
+
+	test("no value of any JSON field reaches the machine views", async () => {
+		const shown = [
+			(await runLs([], pipeIo))._unsafeUnwrap(),
+			(await runLs(["--json"], pipeIo))._unsafeUnwrap(),
+			(await runLs([], ttyIo))._unsafeUnwrap(),
+		].join("\n");
+		for (const secret of ["db.internal", "a@b", "ghp_secret_drill", '"a","b"']) {
+			expect(shown).not.toContain(secret);
+		}
 	});
 });

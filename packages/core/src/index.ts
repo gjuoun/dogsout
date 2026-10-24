@@ -10,6 +10,8 @@ export * from "./ask/cli.ts";
 export * from "./ask/flow.ts";
 export * from "./ask/labels.ts";
 export * from "./ask/mygo.ts";
+export * from "./json-shape.ts";
+export * from "./listing.ts";
 export * from "./migrate.ts";
 export * from "./paths.ts";
 export * from "./policy/evaluate.ts";

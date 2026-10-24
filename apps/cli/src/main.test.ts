@@ -196,12 +196,12 @@ describe("ls glob and the legacy violation report", () => {
 	test("a one-level glob lists that item, a recursive glob lists its subtree", async () => {
 		const one = await runLs(["dev.zai.*"], io);
 		expect(one.isOk()).toBe(true);
-		if (one.isOk()) expect(one.value).toBe("dogsout://dev/zai/api_key");
+		if (one.isOk()) expect(one.value).toBe(".dev.zai.api_key");
 		const deep = await runLs(["dev.**"], io);
 		expect(deep.isOk()).toBe(true);
 		if (deep.isOk()) {
 			const lines = deep.value.split("\n");
-			expect(lines).toEqual(["dogsout://dev/gh/pat", "dogsout://dev/gh/token", "dogsout://dev/zai/api_key"]);
+			expect(lines).toEqual([".dev.gh.pat", ".dev.gh.token", ".dev.zai.api_key"]);
 		}
 	});
 
@@ -226,7 +226,7 @@ describe("ls glob and the legacy violation report", () => {
 		const r = await runLs([], io);
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
-			expect(r.value).toContain("dogsout://e2e/misc/DIRECT_ONE");
+			expect(r.value).toContain(".e2e.misc.DIRECT_ONE");
 			expect(r.value).not.toContain("warning:");
 		}
 		const said = errLines.join("\n");
@@ -246,6 +246,6 @@ describe("ls glob and the legacy violation report", () => {
 		expect(gone.isErr()).toBe(true);
 		const clean = await runLs([], io);
 		expect(clean.isOk()).toBe(true);
-		if (clean.isOk()) expect(clean.value).toContain("dogsout://e2e/misc/direct_one");
+		if (clean.isOk()) expect(clean.value).toContain(".e2e.misc.direct_one");
 	});
 });
