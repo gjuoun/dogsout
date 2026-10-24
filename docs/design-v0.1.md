@@ -13,7 +13,7 @@ reviewers:
 前身是两个项目合并：
 
 - **junethekey（jtk）** — agent 凭据经纪人：策略矩阵、加密 vault、手机审批（repo 已 rename 为 dogsout，git 历史保留）
-- **june-oauth** — 手写的 OAuth 2.0 / OIDC provider PoC：PKCE、refresh rotation、JWKS 协议核心（待移植进来）
+- **dogsout-auth**（原 june-oauth，2026-10-24 更名）— 手写的 OAuth 2.0 / OIDC provider：PKCE、refresh rotation、JWKS 协议核心，独立专业 OAuth 服务器演进
 
 ---
 
@@ -98,7 +98,7 @@ flowchart LR
 
 标准世界的收敛方向（2026-10 可查证）：
 
-- **OAuth 2.1** — june-oauth 已实现的形状（强制 S256 PKCE、exact redirect_uri、one-time code、refresh rotation + reuse detection、RS256 JWKS + discovery）基本就是它要求的
+- **OAuth 2.1** — dogsout-auth（原 june-oauth）已实现的形状（强制 S256 PKCE、exact redirect_uri、one-time code、refresh rotation + reuse detection、RS256 JWKS + discovery）基本就是它要求的
 - **RFC 8693 Token Exchange** — delegation 原语，`act` claim 记录委托链
 - **DPoP（RFC 9449）** — sender-constrained token，token 被偷也重放不了
 - **MCP 2026-07-28** — agentic auth 定为 OAuth 2.1 + RFC 8707 resource binding + CIMD 注册
@@ -109,7 +109,7 @@ flowchart LR
 
 - ✅ repo rename 已做：`junethekey` → **`dogsout`**（GitHub 重定向生效，本地路径与 remote 已更新）
 - ⚠️ 工作树里有 the in-flight mygo approval-UI work（swiftui→mygo、ask.go 等）——先收尾再开 rewrite
-- 📦 june-oauth 的 `lib/*.ts`（约 400 行协议核心）待移植到 `apps/api`（Hono + drizzle），Next.js 的 login/consent 页并入 web
+- 📦 ~~dogsout-auth 的 `lib/*.ts`（约 400 行协议核心）待移植到 `apps/api`（Hono + drizzle）~~ **作废（2026-10-24）**：dogsout-auth 定位为独立的专业 OAuth 服务器，两个 repo 并行演进，不再移植合并
 - 📦 jtk 已有：P0 策略引擎（118 测试绿）、vault、审批通道（mygo UI + 手机 SSH）
 - 📦 sub2api 就是现成的 proxy 网关，缺的只是「token 换成带 agent 身份的短期凭证」
 
@@ -132,6 +132,7 @@ flowchart LR
 - jtk 并入 dogsout（vault 做后端，不再独立repo）
 - 授权 = 三种 delivery mode 统一裁决
 - repo rename：junethekey → dogsout（已完成）
+- june-oauth → **dogsout-auth**（2026-10-24）：定位 = 独立的专业 OAuth 服务器（dedicated professional OAuth server），与 dogsout 双 repo 并行演进；原「协议核心移植进 apps/api」计划作废
 
 **待拍板：**
 
