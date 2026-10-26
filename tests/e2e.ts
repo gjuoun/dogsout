@@ -2,7 +2,7 @@
 // Portable F1 acceptance, migrated from the original F1 acceptance plan.
 // Only fake values and temporary DOGSOUT_HOME directories; drives the real CLI.
 // The vault unlocks through the test-only fake Secure Enclave helper (DOGSOUT_SE_HELPER).
-import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -72,8 +72,8 @@ try {
 	);
 	const imp = await dogsout(home1, ["import-env", fixture, "--vault", "e2e", "--item", "misc"]);
 	check(
-		imp.code === 0 && imp.out.includes("1 refs") && imp.out.includes("skipped 1"),
-		"import classifies values/refs/op-skip",
+		imp.code === 0 && imp.out.includes("1 refs") && imp.out.includes("1 1password refs"),
+		"import classifies values/refs/op-refs",
 		imp.out + imp.err,
 	);
 	const set = await dogsout(home1, ["set", "dogsout://e2e/extra/token", "--stdin"], "tok-abc-999");
@@ -280,6 +280,149 @@ try {
 		"migrate: a second run rewrites nothing (idempotent)",
 		again.out + again.err,
 	);
+	// ---- 1Password refs: a ref-served home never unlocks (tripwire) and never stores a value.
+	const homeRef = mkdtempSync(join(tmpdir(), "dogsout-e2e-ref-"));
+	const fake1p = join(REPO, "packages/core/src/vault/helper/fake-1p.ts");
+	const tripwire = join(homeRef, "se-tripwire.txt");
+	const refMap = join(homeRef, "ref-map.json");
+	const refCalls = join(homeRef, "ref-calls.txt");
+	const REF = "op://dev/api_key/e2eref";
+	const REF_VALUE = "e2e-resolved-value";
+	await Bun.write(refMap, JSON.stringify({ [REF]: REF_VALUE }));
+	const refEnv = (extra: Record<string, string> = {}) => ({
+		DOGSOUT_1P_HELPER: fake1p,
+		FAKE_1P_MAP: refMap,
+		FAKE_1P_CALLS: refCalls,
+		FAKE_SE_TRIPWIRE: tripwire,
+		...extra,
+	});
+	try {
+		const refInit = await dogsout(homeRef, ["init"], "", refEnv());
+		check(refInit.code === 0, "refs: init", refInit.err);
+		// A value that starts with op:// is stored as a reference in config, never as a value.
+		const refSet = await dogsout(homeRef, ["set", "dogsout://op/dev/e2e_key"], REF, refEnv());
+		const cfgAfterSet = JSON.parse(readFileSync(join(homeRef, "config.json"), "utf8")) as {
+			refs?: Record<string, string>;
+		};
+		check(
+			refSet.code === 0 && cfgAfterSet.refs?.["dogsout://op/dev/e2e_key"] === REF,
+			"refs: set with an op:// value writes config.refs, no unlock",
+			refSet.out + refSet.err,
+		);
+		await Bun.write(
+			join(homeRef, "config.json"),
+			JSON.stringify({ ...cfgAfterSet, rules: [{ id: "e2e-allow", principal: "*", resource: "*", decide: "allow" }] }),
+		);
+
+		// The vault is taken away: any unlock attempt now fails, and the tripwire records it.
+		renameSync(join(homeRef, "vault.enc"), join(homeRef, "vault.enc.moved"));
+		const tripwireLength = () => (existsSync(tripwire) ? readFileSync(tripwire, "utf8").length : 0);
+		const beforeTrip = tripwireLength();
+
+		const refGet = await dogsout(homeRef, ["get", "dogsout://op/dev/e2e_key"], "", refEnv());
+		check(
+			refGet.code === 0 &&
+				refGet.out.includes(REF) &&
+				refGet.out.includes("sha256:") &&
+				!refGet.out.includes(REF_VALUE),
+			"refs: get prints the reference + resolved digest, never the value",
+			refGet.out + refGet.err,
+		);
+		const refReveal = await dogsout(homeRef, ["get", "dogsout://op/dev/e2e_key", "--reveal"], "", refEnv());
+		check(
+			refReveal.code === 0 && refReveal.out.trim() === REF_VALUE,
+			"refs: get --reveal prints the resolved value",
+			refReveal.out + refReveal.err,
+		);
+
+		const listed = await dogsout(homeRef, ["ls", "--json"], "", refEnv());
+		type Leaf = { source?: string; ref?: string };
+		const tree =
+			listed.code === 0 ? (JSON.parse(listed.out) as Record<string, Record<string, Record<string, Leaf>>>) : {};
+		const leaf: Leaf = tree.op?.dev?.e2e_key ?? {};
+		check(
+			leaf.source === "1password" && leaf.ref === REF && !JSON.stringify(tree).includes(REF_VALUE),
+			"refs: ls --json names the source and the reference, never a value",
+			listed.out + listed.err,
+		);
+
+		const envRefs = join(homeRef, "secrets.env");
+		await Bun.write(envRefs, "E2E_KEY=dogsout://op/dev/e2e_key\n");
+		const ran = await dogsout(
+			homeRef,
+			["run", "--from-env", envRefs, "--", "sh", "-c", 'test "$E2E_KEY" = ' + REF_VALUE],
+			"",
+			refEnv(),
+		);
+		check(ran.code === 0, "refs: run --from-env injects the resolved value into the child only", ran.out + ran.err);
+
+		const opLine = await dogsout(
+			homeRef,
+			[
+				"run",
+				"--from-env",
+				await (async () => {
+					const p = join(homeRef, "op-line.env");
+					await Bun.write(p, "X=op://dev/api_key/x\n");
+					return p;
+				})(),
+				"--",
+				"sh",
+				"-c",
+				"true",
+			],
+			"",
+			refEnv(),
+		);
+		check(
+			opLine.code !== 0 && opLine.err.includes("import it first: dogsout import-env"),
+			"refs: run --from-env still refuses a raw op:// line",
+			opLine.out + opLine.err,
+		);
+
+		check(
+			tripwireLength() === beforeTrip,
+			"refs: the whole ref path makes zero Secure Enclave calls",
+			`tripwire grew by ${tripwireLength() - beforeTrip} bytes`,
+		);
+
+		// ask-before-read: a first-time ask must not resolve anything.
+		await Bun.write(refCalls, "");
+		const askHome = homeAsk;
+		const askedRun = await dogsout(askHome, ["set", "dogsout://op/dev/ask_key"], REF, refEnv());
+		const askCfg = JSON.parse(readFileSync(join(askHome, "config.json"), "utf8")) as {
+			refs?: Record<string, string>;
+			rules?: unknown[];
+		};
+		await Bun.write(join(askHome, "config.json"), JSON.stringify({ ...askCfg, rules: [] }));
+		const askEnv = join(askHome, "ask.env");
+		await Bun.write(askEnv, "ASK_KEY=dogsout://op/dev/ask_key\n");
+		const beforeAskCalls = existsSync(refCalls) ? readFileSync(refCalls, "utf8").length : 0;
+		const deniedRun = await dogsout(askHome, ["run", "--from-env", askEnv, "--", "sh", "-c", "exit 0"], "", {
+			...refEnv(),
+			DOGSOUT_APPROVE_HELPER: "/nonexistent/dogsout-approve",
+		});
+		const afterAskCalls = existsSync(refCalls) ? readFileSync(refCalls, "utf8").length : 0;
+		check(
+			askedRun.code === 0 && deniedRun.code !== 0 && afterAskCalls === beforeAskCalls,
+			"refs: a first-time ask resolves nothing before approval",
+			`calls before=${beforeAskCalls} after=${afterAskCalls} — ${deniedRun.err}`,
+		);
+
+		const missing = await dogsout(
+			homeRef,
+			["get", "dogsout://op/dev/e2e_key"],
+			"",
+			refEnv({ FAKE_1P_MODE: "missing-token" }),
+		);
+		check(
+			missing.code !== 0 && missing.err.includes("OP_SERVICE_ACCOUNT_TOKEN") && missing.err.includes("sa-token"),
+			"refs: a missing token is a typed failure naming both sources",
+			missing.out + missing.err,
+		);
+	} finally {
+		rmSync(homeRef, { recursive: true, force: true });
+	}
 } finally {
 	rmSync(home1, { recursive: true, force: true });
 	rmSync(home2, { recursive: true, force: true });

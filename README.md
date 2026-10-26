@@ -214,6 +214,37 @@ Vault unlock:
 - Planned (F3): passkey slots via WebAuthn PRF. A synced passkey (iCloud Keychain, 1Password…) puts that provider's account inside the trust boundary — an attacker needs both the account and a copy of `vault.enc`.
 - Rolling backups are whole-file ciphertext copies on the same disk: they protect against a bad write, not against losing the Mac. A removed slot can still open them until rotated out — use `dogsout vault rekey` after a suspected leak.
 
+### 1Password source
+
+An address can be served by an `op://vault/item/field` reference instead of a stored value:
+
+```sh
+printf %s op://dev/api_key/xxxx | dogsout set .op.dev.deepseek_api_key  # a value starting op:// is a ref
+# or bulk: an op:// line in an env file becomes a ref (item = the 1Password vault)
+dogsout import-env ~/.config/op/refs.env                              # KEY=op://dev/api_key/xxx -> .op.dev.<key>
+dogsout get .op.dev.deepseek_api_key                                  # reference + sha256 of the RESOLVED value
+dogsout run --from-env secrets.env -- <cmd>                           # KEY=dogsout://op/dev/deepseek_api_key
+```
+
+References live in `config.json` (`refs: { <address>: op://… }`, 0600) — a reference is a pointer, not
+a secret — and `vault.enc` keeps holding local values only. Reads are resolved at call time through
+`@1password/sdk` by a service-account token (`OP_SERVICE_ACCOUNT_TOKEN`, else `~/.config/op/sa-token`);
+no `op` process is ever spawned. **A command whose names are all served by the refs table never opens
+`vault.enc` and never asks for Touch ID.** `value_hash` is the digest of the resolved value, so
+rotating a 1Password item invalidates an old grant automatically.
+
+The boundary this does **not** buy:
+
+- A service account is scoped **per vault** (`read_items`), cannot be widened or renamed after
+  creation, and cannot be scoped to a single item. The vaults it can read are the 1Password-side
+  allowed set.
+- The SA token at `~/.config/op/sa-token` (0600) is readable by **any same-uid process**. Anyone who
+  can run code as this user can read those vaults directly, bypassing dogsout entirely — the same
+  exposure the `opk` CLI has today. dogsout adds policy, approval and an approval record for its own
+  path; it is **not** an isolation boundary against 1Password.
+- Touch ID protects only the **locally stored** values in `vault.enc`. It plays no part in the
+  reference path.
+
 ## Why
 
 - Password-manager service accounts (1Password, Bitwarden) are vault-wide, read-only, and have no approval hook or per-item scoping — too coarse for local agents.
