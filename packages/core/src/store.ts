@@ -110,7 +110,7 @@ export async function initFiles(home: string): Promise<Result<{ fingerprint: str
 	const se = await seCreate();
 	if (se.isErr()) return err(se.error);
 	const { file } = await createEnvelopeV2({ version: 1, vaults: {} }, se.value);
-	const cfgR = await writeConfig(home, { version: 1, aliases: {}, maps: {} });
+	const cfgR = await writeConfig(home, { version: 1, aliases: {}, maps: {}, refs: {} });
 	if (cfgR.isErr()) return err(cfgR.error);
 	const w = await writeVaultFile(vaultPath(home), file, { rotate: false });
 	if (w.isErr()) return err(w.error.kind === "io" ? w.error.message : w.error.kind);

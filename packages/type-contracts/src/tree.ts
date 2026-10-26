@@ -14,6 +14,14 @@ export const FieldMetaSchema = z.object({
 	bytes: z.number().int().nonnegative(),
 	/** When the owning item was last written (ISO 8601). */
 	updated_at: z.string().min(1),
+	/**
+	 * Where this leaf is served from: absent = a value stored in vault.enc; "1password" = a config
+	 * ref. For a ref leaf `value_hash` is the digest of the REFERENCE and `bytes` its length — a
+	 * listing must never spend a 1Password read, so only `get` prints a resolved digest.
+	 */
+	source: z.literal("1password").optional(),
+	/** The `op://` reference serving this leaf (not a secret); present exactly when source is set. */
+	ref: z.string().min(1).optional(),
 });
 export type FieldMeta = z.infer<typeof FieldMetaSchema>;
 

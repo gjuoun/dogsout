@@ -1,3 +1,6 @@
+import { err, ok, type Result } from "neverthrow";
+import { segmentProblem } from "../address.ts";
+
 /** .env line classification for import-env / export round-trips (spec §5.6). */
 export interface EnvLine {
 	key: string;
@@ -51,4 +54,16 @@ export function formatJsonRef(aliases: Record<string, string>): string {
 		if (v !== undefined) sorted[k] = v;
 	}
 	return JSON.stringify(sorted, null, 2) + "\n";
+}
+
+/**
+ * Env names are UPPER_SNAKE by POSIX convention while address segments are lowercase
+ * [a-z0-9_-]; the field name is the lowercased key (GITHUB_TOKEN -> github_token). Shared by
+ * `import-env` and the refs table, which must fold keys the same way.
+ */
+export function fieldNameOf(key: string): Result<string, string> {
+	const field = key.toLowerCase();
+	const problem = segmentProblem("field", field);
+	if (problem !== null) return err(`${problem} (from key "${key}" in the env file)`);
+	return ok(field);
 }

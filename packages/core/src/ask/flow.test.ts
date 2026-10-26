@@ -8,7 +8,7 @@ import { loadGrants } from "../session/grants.ts";
 import { initFiles, loadConfig, nowIso, openData, saveData, writeConfig } from "../store.ts";
 import { SE_HELPER_ENV } from "../vault/se.ts";
 import type { Channel } from "./channel.ts";
-import { prepareRun } from "./flow.ts";
+import { prepareRun, sha256Hex } from "./flow.ts";
 import { HELPER_ENV, mygoChannel } from "./mygo.ts";
 
 const ADDRESS = "dogsout://dev/zai/api_key";
@@ -223,5 +223,192 @@ describe("ask flow (policy -> channel -> grant)", () => {
 		delete process.env[HELPER_ENV];
 		delete process.env.FAKE_APPROVE_MODE;
 		expect(r.isErr()).toBe(true);
+	});
+});
+describe("ask flow with 1password references", () => {
+	const REF = "op://dev/api_key/refkey";
+	const REF_ADDR = "dogsout://op/dev/ref_key";
+
+	/** A resolver that records every batch, so "zero reads" is a count, not a claim. */
+	function counting(values: Record<string, string>) {
+		const batches: string[][] = [];
+		return {
+			batches,
+			resolver: {
+				async resolve(refs: readonly string[]) {
+					batches.push([...refs]);
+					const out = new Map<string, string>();
+					for (const ref of refs) {
+						const v = values[ref];
+						if (v === undefined) return err({ kind: "resolve" as const, ref, message: "no value" });
+						out.set(ref, v);
+					}
+					return ok(out);
+				},
+			},
+		};
+	}
+
+	async function seedRefs(
+		entries: Record<string, string>,
+		rules: Array<{ id: string; decide: "allow" | "ask" | "deny" }> = [],
+	) {
+		const c = await cfg();
+		c.refs = { ...c.refs, ...entries };
+		c.rules = rules.map((r) => ({ principal: "*", resource: "*", ...r }));
+		const w = await writeConfig(home, c);
+		if (w.isErr()) throw new Error(w.error);
+	}
+
+	async function clearGrants() {
+		const { rmSync } = await import("node:fs");
+		rmSync(join(home, "grants.json"), { force: true });
+	}
+
+	test("a first-time ask costs zero 1Password reads, then records the resolved hash", async () => {
+		await clearGrants();
+		await seedRefs({ [REF_ADDR]: REF });
+		const fake = counting({ [REF]: "resolved-secret-1" });
+		const first = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: fake.resolver,
+			principal: "ref@unit",
+			groups: [],
+			names: [REF_ADDR],
+			channels: [approveAll],
+			askBudgetMs: 5000,
+		});
+		expect(first.isOk()).toBe(true);
+		expect(fake.batches.length).toBe(1); // after approval only
+		expect(fake.batches[0]).toEqual([REF]);
+		if (first.isOk()) expect(first.value.inject[REF_ADDR]).toBe("resolved-secret-1");
+
+		const grants = await loadGrants(home);
+		const granted = grants.isOk()
+			? grants.value.grants.find((g) => g.principal === "ref@unit" && g.alias === REF_ADDR)
+			: undefined;
+		expect(granted?.value_hash).toBe(await sha256Hex("resolved-secret-1"));
+	});
+
+	test("an allow rule reads a batch without a window, deduped across keys", async () => {
+		await clearGrants();
+		await seedRefs(
+			{ [REF_ADDR]: REF, "dogsout://op/dev/ref_two": REF, "dogsout://op/dev/ref_three": "op://dev/api_key/other" },
+			[{ id: "allow-refs", decide: "allow" }],
+		);
+		const fake = counting({ [REF]: "same", "op://dev/api_key/other": "other" });
+		const r = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: fake.resolver,
+			principal: "ref@unit",
+			groups: [],
+			names: [REF_ADDR, "dogsout://op/dev/ref_two", "dogsout://op/dev/ref_three"],
+			channels: [],
+			askBudgetMs: 1000,
+		});
+		expect(r.isOk()).toBe(true);
+		expect(fake.batches.length).toBe(1);
+		expect(fake.batches[0]).toEqual([REF, "op://dev/api_key/other"]);
+		if (r.isOk()) {
+			expect(r.value.inject[REF_ADDR]).toBe("same");
+			expect(r.value.inject["dogsout://op/dev/ref_three"]).toBe("other");
+		}
+	});
+
+	test("a rotated upstream value invalidates the grant and re-asks", async () => {
+		await clearGrants();
+		await seedRefs({ [REF_ADDR]: REF });
+		const stale = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: counting({ [REF]: "old-value" }).resolver,
+			principal: "ref@unit",
+			groups: [],
+			names: [REF_ADDR],
+			channels: [approveAll],
+			askBudgetMs: 5000,
+		});
+		expect(stale.isOk()).toBe(true);
+
+		const fake = counting({ [REF]: "new-value" });
+		const rotated = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: fake.resolver,
+			principal: "ref@unit",
+			groups: [],
+			names: [REF_ADDR],
+			channels: [approveAll],
+			askBudgetMs: 5000,
+		});
+		expect(rotated.isOk()).toBe(true);
+		if (rotated.isOk()) expect(rotated.value.asked).toEqual([REF_ADDR]);
+	});
+
+	test("a missing token fails closed with 0 names injected", async () => {
+		await clearGrants();
+		await seedRefs({ [REF_ADDR]: REF });
+		const denied = {
+			async resolve() {
+				return err({
+					kind: "missing-token" as const,
+					message: "no service account token (OP_SERVICE_ACCOUNT_TOKEN unset and ~/.config/op/sa-token unreadable)",
+				});
+			},
+		};
+		const r = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: denied,
+			principal: "ref@unit",
+			groups: [],
+			names: [REF_ADDR],
+			channels: [approveAll],
+			askBudgetMs: 5000,
+		});
+		expect(r.isErr()).toBe(true);
+		if (r.isErr()) {
+			expect(r.error).toContain("OP_SERVICE_ACCOUNT_TOKEN");
+			expect(r.error).toContain("sa-token");
+		}
+	});
+
+	test("a vault address without opened data is a typed error", async () => {
+		const r = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			resolver: counting({}).resolver,
+			principal: "ref@unit",
+			groups: [],
+			names: [ALIAS],
+			channels: [],
+			askBudgetMs: 1000,
+		});
+		expect(r.isErr()).toBe(true);
+		if (r.isErr()) expect(r.error).toContain("vault not opened");
+	});
+
+	test("a reference with no resolver is a typed error", async () => {
+		await seedRefs({ "dogsout://op/dev/no_resolver": "op://dev/api_key/none" }, [{ id: "allow", decide: "allow" }]);
+		const r = await prepareRun({
+			home,
+			cfg: await cfg(),
+			data: undefined,
+			principal: "ref@unit",
+			groups: [],
+			names: ["dogsout://op/dev/no_resolver"],
+			channels: [],
+			askBudgetMs: 1000,
+		});
+		expect(r.isErr()).toBe(true);
+		if (r.isErr()) expect(r.error).toContain("no resolver configured");
 	});
 });

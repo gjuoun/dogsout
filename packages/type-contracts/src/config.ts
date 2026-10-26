@@ -41,6 +41,12 @@ export const ConfigSchema = z.object({
 	aliases: z.record(z.string(), AddressSchema).default({}),
 	/** Map slots — name -> address or another slot; resolved fresh on every read (vault-link). */
 	maps: z.record(z.string(), z.string()).default({}),
+	/**
+	 * Address -> `op://` reference (F6). A reference is a pointer, not a secret, so it lives here next
+	 * to aliases: reads served by this table never open the vault. The reference is resolved at read
+	 * time by the service-account resolver; only `get --reveal` and a child env ever see the value.
+	 */
+	refs: z.record(z.string(), z.string()).default({}),
 	principals: z.array(PrincipalSchema).optional(),
 	rules: z.array(RuleSchema).optional(),
 });
@@ -49,9 +55,24 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 /** Parse and validate; first schema error as a plain message (boundary = plain data). */
+/** Refs are validated by hand: a bad table must fail loudly at load, naming the entry. */
+function refsProblem(refs: Record<string, string>): string | null {
+	for (const [address, ref] of Object.entries(refs)) {
+		if (!AddressSchema.safeParse(address).success)
+			return `refs: "${address}" is not a dogsout://<vault>/<item>/<field> address`;
+		if (!ref.startsWith("op://"))
+			return `refs: "${address}" must map to an op:// reference, got ${JSON.stringify(ref.slice(0, 12))}`;
+	}
+	return null;
+}
+
 export function parseConfig(raw: unknown): { ok: true; config: Config } | { ok: false; error: string } {
 	const r = ConfigSchema.safeParse(raw);
-	if (r.success) return { ok: true, config: r.data };
-	const issue = r.error.issues[0] ?? { path: ["(root)"], message: "invalid config" };
-	return { ok: false, error: `${issue.path.join(".") || "(root)"}: ${issue.message}` };
+	if (!r.success) {
+		const issue = r.error.issues[0] ?? { path: ["(root)"], message: "invalid config" };
+		return { ok: false, error: `${issue.path.join(".") || "(root)"}: ${issue.message}` };
+	}
+	const problem = refsProblem(r.data.refs);
+	if (problem !== null) return { ok: false, error: problem };
+	return { ok: true, config: r.data };
 }

@@ -9,6 +9,14 @@ const b64 = (u: ArrayBuffer) => Buffer.from(new Uint8Array(u)).toString("base64"
 const bytes = (s: string) => new Uint8Array(Buffer.from(s, "base64"));
 const mode = process.argv[2];
 
+// Opt-in tripwire: any invocation is recorded, so a test can prove a path never unlocks
+// (the 1Password ref path must never reach the Secure Enclave).
+const tripwire = process.env.FAKE_SE_TRIPWIRE;
+if (tripwire) {
+	const { appendFileSync } = await import("node:fs");
+	appendFileSync(tripwire, `FAKE-SE-INVOKED ${mode ?? ""}\n`);
+}
+
 async function readJson(): Promise<Record<string, string>> {
 	return JSON.parse(await new Response(Bun.stdin.stream()).text());
 }
