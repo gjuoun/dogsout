@@ -32,13 +32,17 @@ afterAll(() => {
 });
 
 describe("import-env / export round-trip", () => {
-	test("import classifies directs / refs / op-skip", async () => {
+	test("import classifies directs / refs / op refs", async () => {
 		const r = await runImportEnv([fixturePath, "--vault", "e2e", "--item", "misc"]);
 		expect(r.isOk()).toBe(true);
 		if (r.isOk()) {
 			expect(r.value).toContain("imported 1 values, 1 refs");
-			expect(r.value).toContain("skipped 1");
+			expect(r.value).toContain("1 1password refs");
 		}
+		// OP_X=op://dev/a/b became a config ref at .e2e.dev.op_x, with no value anywhere.
+		const cfg = await loadConfig(home);
+		expect(cfg.isOk()).toBe(true);
+		if (cfg.isOk()) expect(cfg.value.refs["dogsout://op/dev/op_x"]).toBe("op://dev/a/b");
 	});
 
 	test("env-ref export is sorted aliases only (no op://, no direct values)", async () => {

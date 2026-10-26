@@ -1,4 +1,13 @@
-import { formatAddress, nowIso, openData, saveData } from "@dogsout/core";
+import {
+	formatAddress,
+	isOnePasswordRef,
+	loadConfig,
+	nowIso,
+	openData,
+	refKeyOf,
+	saveData,
+	writeConfig,
+} from "@dogsout/core";
 import { command, flag, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { desugarAddress } from "./address-input.ts";
@@ -9,7 +18,7 @@ export function setCommand(io: Io = defaultIo) {
 	return withMeta(
 		command({
 			name: "set",
-			description: "store a secret from stdin at a dogsout:// address",
+			description: "store a value from stdin; a value starting with op:// is kept as a 1password ref",
 			args: {
 				addr: positional({ type: string, displayName: "dogsout://vault/item/field | .vault.item.field" }),
 				stdin: flag({ long: "stdin", description: "value is read from stdin (default behavior)" }),
@@ -58,6 +67,23 @@ export function setCommand(io: Io = defaultIo) {
 				if (value.length === 0) return fail("empty value refused");
 				const ctxR = ctxFromEnv();
 				if (ctxR.isErr()) return err(ctxR.error);
+				const existingCfg = await loadConfig(ctxR.value.home);
+				if (existingCfg.isErr()) return err(existingCfg.error);
+				const addressKey = refKeyOf(formatAddress(parsed.value));
+				if (addressKey === null) return fail(`cannot read "${addr}" as an address`);
+				// A value that IS a reference is a pointer, not a secret: it belongs in config.json, needs
+				// no unlock, and is not parsed here — a typo surfaces at read time as a typed error.
+				if (isOnePasswordRef(value)) {
+					existingCfg.value.refs[addressKey] = value;
+					const w = await writeConfig(ctxR.value.home, existingCfg.value);
+					if (w.isErr()) return err(w.error);
+					return ok(`set ${addressKey} (1password ref)`);
+				}
+				if (existingCfg.value.refs[addressKey] !== undefined) {
+					return fail(
+						`${addressKey} is served by a 1password ref — set an op:// reference to replace it, or dogsout rm ${addressKey} first`,
+					);
+				}
 				const opened = await openData(ctxR.value);
 				if (opened.isErr()) return err(opened.error);
 				const { envelope, data } = opened.value;
@@ -72,7 +98,7 @@ export function setCommand(io: Io = defaultIo) {
 				return ok(`set ${formatAddress(parsed.value)}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
+		{ reads: ["config"], writes: ["vault", "config"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 

@@ -1,4 +1,4 @@
-import { nowIso, openData, saveData } from "@dogsout/core";
+import { formatAddress, loadConfig, nowIso, openData, refKeyOf, saveData, writeConfig } from "@dogsout/core";
 import { command, positional, string } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { desugarAddress } from "./address-input.ts";
@@ -9,7 +9,7 @@ export function rmCommand() {
 	return withMeta(
 		command({
 			name: "rm",
-			description: "remove one field",
+			description: "remove one field (a 1password ref if the address is served by one)",
 			args: {
 				addr: positional({ type: string, displayName: "dogsout://vault/item/field | .vault.item.field" }),
 			},
@@ -19,6 +19,19 @@ export function rmCommand() {
 				if (parsed.value.subpath.length > 0) return fail("rm targets a field, not a subpath");
 				const ctxR = ctxFromEnv();
 				if (ctxR.isErr()) return err(ctxR.error);
+				const key = refKeyOf(formatAddress(parsed.value));
+				// A reference is the whole leaf for that address: removing the leaf removes the ref,
+				// and no vault is opened to do it.
+				if (key !== null) {
+					const cfg = await loadConfig(ctxR.value.home);
+					if (cfg.isErr()) return err(cfg.error);
+					if (cfg.value.refs[key] !== undefined) {
+						delete cfg.value.refs[key];
+						const w = await writeConfig(ctxR.value.home, cfg.value);
+						if (w.isErr()) return err(w.error);
+						return ok(`removed ${key} (1password ref)`);
+					}
+				}
 				const opened = await openData(ctxR.value);
 				if (opened.isErr()) return err(opened.error);
 				const { vault, item, field } = parsed.value;
@@ -31,7 +44,7 @@ export function rmCommand() {
 				return ok(`removed ${addr}`);
 			},
 		}),
-		{ reads: [], writes: ["vault"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
+		{ reads: ["config"], writes: ["vault", "config"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
 }
 
