@@ -57,11 +57,13 @@ export const featureMap: FeatureMap = {
 		},
 		set: {
 			tier: "stable",
-			does: "store a value from stdin at a dogsout:// address (or .vault.item.field sugar); vault/item are auto-created",
+			does: "store a value from stdin at a dogsout:// address (or .vault.item.field sugar); a value starting with op:// is kept as a 1password ref",
 			plaintext: "value arrives via stdin, never as a CLI argument",
 			gotchas: [
 				"--stdin is declared but optional — the value ALWAYS comes from stdin",
 				"one trailing newline is stripped; empty result is refused",
+				"a value starting with op:// goes to config.json (0600) as a reference: no unlock, no parse, no 1Password call — a typo surfaces at read time",
+				"a literal write is refused when the address is already served by a ref — set an op:// reference to replace it, or rm it first",
 				"a value lives on a leaf only: an item path or a subpath is refused (one node cannot be both a value and a branch)",
 				"segments are [a-z0-9_-]; the jq-style sugar is CLI input only — stored addresses stay canonical",
 			],
@@ -144,11 +146,12 @@ export const featureMap: FeatureMap = {
 		},
 		"import-env": {
 			tier: "stable",
-			does: "import a .env file: literals into the vault, dogsout:// refs become aliases, op:// skipped",
+			does: "import a .env file: literals into the vault, dogsout:// refs become aliases, op:// lines become config refs",
 			gotchas: [
 				"a literal key becomes its lowercased field name (GITHUB_TOKEN -> github_token): env names are UPPER_SNAKE, address segments are lowercase",
 				"a key still invalid after lowercasing, or two keys folding onto one field, aborts the whole import",
 				"--vault/--item and every dogsout:// ref are validated before anything is written (no partial import)",
+				"an op:// line lands as a config ref at dogsout://op/<1p-vault>/<lowercased key> (fixed op namespace, independent of --vault); a file of refs only never opens the vault",
 			],
 			legacyKeys: ["io-importenv"],
 		},

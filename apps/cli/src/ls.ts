@@ -1,10 +1,14 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
 	buildListing,
 	groupViolations,
 	type ListingNode,
 	listingToTrie,
+	loadConfig,
 	openData,
 	type PathEntry,
+	refEntries,
 	scanAddress,
 	selectEntries,
 	vaultStore,
@@ -45,9 +49,22 @@ export function lsCommand(io: Io = defaultIo) {
 			handler: async ({ path, json }): Promise<Result<string, string>> => {
 				const ctxR = ctxFromEnv();
 				if (ctxR.isErr()) return err(ctxR.error);
-				const opened = await openData(ctxR.value);
-				if (opened.isErr()) return err(opened.error);
-				const store = vaultStore(opened.value.data);
+				const cfg = await loadConfig(ctxR.value.home);
+				if (cfg.isErr()) return err(cfg.error);
+				// Two stores, one listing: the refs table is config-only (never a 1Password read), the
+				// vault is opened only when this home actually has one.
+				const vaultFile = join(ctxR.value.home, "vault.enc");
+				const vaultLeafs: PathEntry[] = [];
+				if (existsSync(vaultFile)) {
+					const opened = await openData(ctxR.value);
+					if (opened.isErr()) return err(opened.error);
+					vaultLeafs.push(...vaultStore(opened.value.data).list());
+				}
+				const configMtime = new Date(
+					Bun.file(join(ctxR.value.home, "config.json")).lastModified || Date.now(),
+				).toISOString();
+				const refs = refEntries(cfg.value.refs, configMtime);
+				const store = mergedStore(refs, vaultLeafs);
 				const selected =
 					path === undefined ? ok<Selection>({ entries: store.list(), depth: 0 }) : selectFor(path, store);
 				if (selected.isErr()) return err(selected.error);
@@ -62,8 +79,23 @@ export function lsCommand(io: Io = defaultIo) {
 				return ok(ttyOf(io) ? asTree(roots, depth === 0) : leavesOf(roots).join("\n"));
 			},
 		}),
-		{ reads: ["vault"], writes: [], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
+		{ reads: ["vault", "config"], writes: [], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },
 	);
+}
+
+/**
+ * One store over both sources: refs first (they are the authoritative answer for an address), then
+ * vault leaves that no ref shadows. Sorted by address so the tree and the pipe view stay stable.
+ */
+function mergedStore(refs: PathEntry[], vaultLeafs: PathEntry[]): ReturnType<typeof vaultStore> {
+	const byAddress = new Map<string, PathEntry>();
+	for (const entry of vaultLeafs) byAddress.set(entry.address, entry);
+	for (const entry of refs) byAddress.set(entry.address, entry);
+	const entries = [...byAddress.values()].sort((a, b) => a.address.localeCompare(b.address));
+	return {
+		list: () => entries,
+		get: (p) => entries.find((e) => e.path.length === p.length && e.path.every((s, i) => s === p[i])),
+	};
 }
 
 /** The listing plus where it is rooted (0 = vaults, 2 = the field itself). */

@@ -1,9 +1,11 @@
 import {
+	fieldNameOf,
 	loadConfig,
 	nowIso,
 	openData,
 	parseAddressStrict,
 	parseEnvFile,
+	parseOnePasswordRef,
 	saveData,
 	segmentProblem,
 	writeConfig,
@@ -13,23 +15,12 @@ import { err, ok, type Result } from "neverthrow";
 import { runDogsout, withMeta } from "./cmd.ts";
 import { ctxFromEnv } from "./context.ts";
 
-/**
- * Env names are UPPER_SNAKE by POSIX convention while address segments are lowercase
- * [a-z0-9_-]; the field name is the lowercased key (GITHUB_TOKEN -> github_token). Unchanged
- * otherwise, so a lowercase key imports under its own name.
- */
-function fieldOf(key: string): Result<string, string> {
-	const field = key.toLowerCase();
-	const problem = segmentProblem("field", field);
-	if (problem !== null) return err(`${problem} (from key "${key}" in the env file)`);
-	return ok(field);
-}
-
 export function importEnvCommand() {
 	return withMeta(
 		command({
 			name: "import-env",
-			description: "import a .env file: literal values into the vault, dogsout:// refs become aliases",
+			description:
+				"import a .env file: literal values into the vault, dogsout:// refs become aliases, op:// lines become config refs",
 			args: {
 				file: positional({ type: string, displayName: "file.env" }),
 				vault: option({
@@ -70,7 +61,7 @@ export function importEnvCommand() {
 				const directs: Array<{ field: string; value: string }> = [];
 				const claimed = new Map<string, string>();
 				for (const d of plan.directs) {
-					const field = fieldOf(d.key);
+					const field = fieldNameOf(d.key);
 					if (field.isErr()) {
 						problems.push(field.error);
 						continue;
@@ -87,6 +78,38 @@ export function importEnvCommand() {
 					const parsed = parseAddressStrict(r.value);
 					if (parsed.isErr()) problems.push(`ref ${r.key}=${r.value}: ${parsed.error}`);
 				}
+				// An op:// line becomes a config ref served by the service account. The 1Password vault
+				// becomes the address item, so a vault name that is not a valid segment (Personal Vault)
+				// aborts the whole import instead of being silently renamed.
+				const opRefs: Array<{ address: string; ref: string }> = [];
+				const claimedAddresses = new Map<string, string>();
+				for (const line of plan.skipped) {
+					const parsed = parseOnePasswordRef(line.value);
+					if (parsed.isErr()) {
+						problems.push(`${line.key}: ${parsed.error}`);
+						continue;
+					}
+					const field = fieldNameOf(line.key);
+					if (field.isErr()) {
+						problems.push(field.error);
+						continue;
+					}
+					// The reference namespace is fixed at `op` (item = the 1Password vault), independent of
+					// --vault, which only chooses where literal values land.
+					const address = `dogsout://op/${parsed.value.vault.toLowerCase()}/${field.value}`;
+					const checked = parseAddressStrict(address);
+					if (checked.isErr()) {
+						problems.push(`${line.key} -> ${address}: ${checked.error}`);
+						continue;
+					}
+					const previous = claimedAddresses.get(address);
+					if (previous !== undefined) {
+						problems.push(`keys "${previous}" and "${line.key}" both become ${address} — rename one`);
+						continue;
+					}
+					claimedAddresses.set(address, line.key);
+					opRefs.push({ address, ref: parsed.value.ref });
+				}
 				if (problems.length > 0) {
 					return err(`import aborted, nothing written:\n  ${problems.join("\n  ")}`);
 				}
@@ -95,29 +118,32 @@ export function importEnvCommand() {
 				if (ctxR.isErr()) return err(ctxR.error);
 				const ctx = ctxR.value;
 				const home = ctx.home;
-				const opened = await openData(ctx);
-				if (opened.isErr()) return err(opened.error);
-				const { envelope, data } = opened.value;
-				data.vaults[vault] ??= {};
-				const items = data.vaults[vault];
-				if (!items[item]) items[item] = { fields: {}, updated_at: nowIso() };
-				const target = items[item];
-				for (const d of directs) target.fields[d.field] = d.value;
-				target.updated_at = nowIso();
-				const saved = await saveData(ctx, envelope, data);
-				if (saved.isErr()) return err(saved.error);
+				// A file of references only must not unlock the vault: open it solely for literal values.
+				if (directs.length > 0) {
+					const opened = await openData(ctx);
+					if (opened.isErr()) return err(opened.error);
+					const { envelope, data } = opened.value;
+					data.vaults[vault] ??= {};
+					const items = data.vaults[vault];
+					if (!items[item]) items[item] = { fields: {}, updated_at: nowIso() };
+					const target = items[item];
+					for (const d of directs) target.fields[d.field] = d.value;
+					target.updated_at = nowIso();
+					const saved = await saveData(ctx, envelope, data);
+					if (saved.isErr()) return err(saved.error);
+				}
 
-				if (plan.refs.length > 0) {
+				if (plan.refs.length > 0 || opRefs.length > 0) {
 					const cfg = await loadConfig(home);
 					if (cfg.isErr()) return err(cfg.error);
 					for (const r of plan.refs) cfg.value.aliases[r.key] = r.value;
+					for (const e of opRefs) cfg.value.refs[e.address] = e.ref;
 					const w = await writeConfig(home, cfg.value);
 					if (w.isErr()) return err(w.error);
 				}
 
-				const skippedNote =
-					plan.skipped.length > 0 ? `, skipped ${plan.skipped.length} (op:// — adapter lands in F6)` : "";
-				return ok(`imported ${directs.length} values, ${plan.refs.length} refs${skippedNote} -> ${vault}/${item}`);
+				const opNote = opRefs.length > 0 ? `, ${opRefs.length} 1password refs -> op` : ` -> ${vault}/${item}`;
+				return ok(`imported ${directs.length} values, ${plan.refs.length} refs${opNote}`);
 			},
 		}),
 		{ reads: ["vault", "config"], writes: ["vault", "config"], env: ["DOGSOUT_HOME", "DOGSOUT_SE_HELPER"] },

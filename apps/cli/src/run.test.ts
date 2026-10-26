@@ -85,7 +85,10 @@ describe("dogsout run env injection", () => {
 		await Bun.write(opFile, "K=op://dev/a/b\n");
 		const bad = await runRun(["--from-env", opFile, "--", "sh", "-c", "true"]);
 		expect(bad.isErr()).toBe(true);
-		if (bad.isErr()) expect(bad.error).toContain("op://");
+		if (bad.isErr()) {
+			expect(bad.error).toContain("import it first: dogsout import-env");
+			expect(bad.error).toContain("K");
+		}
 	});
 
 	test("missing alias -> typed failure, no child spawned", async () => {
