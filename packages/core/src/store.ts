@@ -9,11 +9,24 @@ import {
 import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 import { configPath, vaultPath } from "./paths.ts";
-import { createEnvelopeV2, openDataV2, resealV2, unlockWithSe } from "./vault/envelope.ts";
+import {
+	createEnvelopeTokenV2,
+	createEnvelopeV2,
+	openDataV2,
+	pickTokenSlot,
+	resealV2,
+	unlockWithSe,
+	unlockWithToken,
+} from "./vault/envelope.ts";
 import { pickLocalSeSlot, seCreate, seEcdh } from "./vault/se.ts";
+import { mintUnlockToken, readUnlockToken, unlockTokenPath } from "./vault/token.ts";
 import { listVaultBackups, readVaultRaw, writeVaultFile } from "./vault/vault.ts";
 
-/** Storage context. There is no password: the vault unlocks through this Mac's Secure Enclave. */
+/**
+ * Storage context. The default unlock factor is a local token file (no biometrics); Secure
+ * Enclave slots still exist for vaults created before 2026-10-30 and are reachable only with
+ * DOGSOUT_ALLOW_SE=1, which the migration command `vault token-add` sets for one run.
+ */
 export interface Ctx {
 	home: string;
 }
@@ -67,17 +80,44 @@ export async function openDataAt(
 	const parsed = version === 2 ? parseVaultFileV2(rawR.value) : null;
 	if (!parsed?.ok) return err(corrupt(ctx.home));
 	const file = parsed.file;
-	const slot = await pickLocalSeSlot(file);
-	if (!slot) {
+
+	// 1) Local token — the default path: no UI, no Secure Enclave, no Touch ID.
+	const tokenR = readUnlockToken(ctx.home);
+	if (tokenR.isOk()) {
+		const slot = pickTokenSlot(file, tokenR.value);
+		if (slot) {
+			const dek = await unlockWithToken(file, slot, tokenR.value);
+			if (dek.isErr()) {
+				const why = dek.error.kind === "unlock" ? dek.error.message : "corrupt";
+				return err(`vault unlock failed: ${why}`);
+			}
+			const data = await openDataV2(file, dek.value);
+			if (data.isErr()) return err(corrupt(ctx.home));
+			return ok({ envelope: { file, dek: dek.value, slotId: slot.id }, data: data.value });
+		}
+	}
+
+	// 2) Legacy Touch ID slots: never automatic — only the one-shot migration opts in.
+	if (process.env.DOGSOUT_ALLOW_SE === "1") {
+		const slot = await pickLocalSeSlot(file);
+		if (slot) {
+			const dek = await unlockWithSe(file, slot, seEcdh);
+			if (dek.isErr())
+				return err(`vault unlock failed: ${dek.error.kind === "unlock" ? dek.error.message : "corrupt"}`);
+			const data = await openDataV2(file, dek.value);
+			if (data.isErr()) return err(corrupt(ctx.home));
+			return ok({ envelope: { file, dek: dek.value, slotId: slot.id }, data: data.value });
+		}
+	}
+
+	if (file.slots.some((s) => s.kind === "token")) {
 		return err(
-			`no unlock slot for this Mac (vault ${file.fingerprint}) — reset with your passkey in the dogsout WebUI (F3), then this Mac gets its own Touch ID slot`,
+			`${tokenR.isErr() ? tokenR.error : "this vault has no slot for the current unlock token"} (vault ${file.fingerprint})`,
 		);
 	}
-	const dek = await unlockWithSe(file, slot, seEcdh);
-	if (dek.isErr()) return err(`vault unlock failed: ${dek.error.kind === "unlock" ? dek.error.message : "corrupt"}`);
-	const data = await openDataV2(file, dek.value);
-	if (data.isErr()) return err(corrupt(ctx.home));
-	return ok({ envelope: { file, dek: dek.value, slotId: slot.id }, data: data.value });
+	return err(
+		`vault ${file.fingerprint} has no local token slot — run: dogsout vault token-add (one final Touch ID), or recreate with: dogsout init --force`,
+	);
 }
 
 export async function saveData(ctx: Ctx, envelope: OpenedEnvelope, data: VaultData): Promise<Result<void, string>> {
@@ -100,33 +140,57 @@ export async function writeConfig(home: string, config: Config): Promise<Result<
 }
 
 /**
- * Create config.json + an empty vault: mint a Secure Enclave key, seal under a fresh DEK, then
- * unlock once (one Touch ID) — init only succeeds if the new slot really opens; otherwise the
- * files it wrote are removed.
+ * Create config.json + an empty vault. Default mode (`token`): mint a local 0600 token, seal the
+ * vault with a token slot and verify it opens — no Touch ID anywhere. `mode: "se"` keeps the
+ * legacy Secure Enclave flow (one Touch ID at init).
  */
-export async function initFiles(home: string): Promise<Result<{ fingerprint: string }, string>> {
+export async function initFiles(
+	home: string,
+	opts: { mode?: "token" | "se" } = {},
+): Promise<Result<{ fingerprint: string; tokenPath?: string }, string>> {
 	const { mkdirSync, rmSync } = await import("node:fs");
 	mkdirSync(home, { recursive: true });
-	const se = await seCreate();
-	if (se.isErr()) return err(se.error);
-	const { file } = await createEnvelopeV2({ version: 1, vaults: {} }, se.value);
+	const mode = opts.mode ?? "token";
+
+	if (mode === "se") {
+		const se = await seCreate();
+		if (se.isErr()) return err(se.error);
+		const { file } = await createEnvelopeV2({ version: 1, vaults: {} }, se.value);
+		const cfgR = await writeConfig(home, { version: 1, aliases: {}, maps: {}, refs: {} });
+		if (cfgR.isErr()) return err(cfgR.error);
+		const w = await writeVaultFile(vaultPath(home), file, { rotate: false });
+		if (w.isErr()) return err(w.error.kind === "io" ? w.error.message : w.error.kind);
+		const slot = await pickLocalSeSlot(file);
+		const dek = slot ? await unlockWithSe(file, slot, seEcdh) : null;
+		if (!dek || dek.isErr()) {
+			rmSync(vaultPath(home), { force: true });
+			rmSync(configPath(home), { force: true });
+			const why = dek?.isErr()
+				? dek.error.kind === "unlock"
+					? dek.error.message
+					: "corrupt"
+				: "slot not usable on this Mac";
+			return err(`init aborted: the new Touch ID slot did not open (${why})`);
+		}
+		return ok({ fingerprint: file.fingerprint });
+	}
+
+	const tokenR = await mintUnlockToken(home);
+	if (tokenR.isErr()) return err(tokenR.error);
+	const { file } = await createEnvelopeTokenV2({ version: 1, vaults: {} }, tokenR.value);
 	const cfgR = await writeConfig(home, { version: 1, aliases: {}, maps: {}, refs: {} });
 	if (cfgR.isErr()) return err(cfgR.error);
 	const w = await writeVaultFile(vaultPath(home), file, { rotate: false });
 	if (w.isErr()) return err(w.error.kind === "io" ? w.error.message : w.error.kind);
-	const slot = await pickLocalSeSlot(file);
-	const dek = slot ? await unlockWithSe(file, slot, seEcdh) : null;
+	const slot = pickTokenSlot(file, tokenR.value);
+	const dek = slot ? await unlockWithToken(file, slot, tokenR.value) : null;
 	if (!dek || dek.isErr()) {
 		rmSync(vaultPath(home), { force: true });
 		rmSync(configPath(home), { force: true });
-		const why = dek?.isErr()
-			? dek.error.kind === "unlock"
-				? dek.error.message
-				: "corrupt"
-			: "slot not usable on this Mac";
-		return err(`init aborted: the new Touch ID slot did not open (${why})`);
+		const why = dek?.isErr() ? (dek.error.kind === "unlock" ? dek.error.message : "corrupt") : "slot not found";
+		return err(`init aborted: the new token slot did not open (${why})`);
 	}
-	return ok({ fingerprint: file.fingerprint });
+	return ok({ fingerprint: file.fingerprint, tokenPath: unlockTokenPath(home) });
 }
 
 export function nowIso(): string {

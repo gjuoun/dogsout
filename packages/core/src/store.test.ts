@@ -11,12 +11,17 @@ import { listVaultBackups, writeVaultFile } from "./vault/vault.ts";
 
 const FAKE = join(import.meta.dir, "vault", "helper", "fake-se.ts");
 const prev = process.env[SE_HELPER_ENV];
+const prevAllowSe = process.env.DOGSOUT_ALLOW_SE;
 beforeAll(() => {
 	process.env[SE_HELPER_ENV] = FAKE;
+	// legacy se-slot tests: the one-shot opt-in that migration commands use
+	process.env.DOGSOUT_ALLOW_SE = "1";
 });
 afterAll(() => {
 	if (prev === undefined) delete process.env[SE_HELPER_ENV];
 	else process.env[SE_HELPER_ENV] = prev;
+	if (prevAllowSe === undefined) delete process.env.DOGSOUT_ALLOW_SE;
+	else process.env.DOGSOUT_ALLOW_SE = prevAllowSe;
 });
 
 const data = (): VaultData => ({
@@ -61,14 +66,14 @@ describe("store: version-dispatching open/save", () => {
 		}
 	});
 
-	test("v2 with no slot for this Mac points at the passkey reset", async () => {
+	test("v2 with no usable slot for this Mac points at the token migration", async () => {
 		const { home, file } = await v2Home();
 		try {
 			const foreign = { ...file, slots: file.slots.map((s) => ({ ...s, blob: "Zm9yZWlnbg==" })) };
 			await writeVaultFile(vaultPath(home), foreign);
 			const r = await openData({ home });
 			expect(r.isErr()).toBe(true);
-			expect(r._unsafeUnwrapErr()).toContain("passkey");
+			expect(r._unsafeUnwrapErr()).toContain("token");
 		} finally {
 			rmSync(home, { recursive: true, force: true });
 		}
@@ -88,10 +93,30 @@ describe("store: version-dispatching open/save", () => {
 		}
 	});
 
-	test("initFiles creates config + a v2 vault that opens through the se slot", async () => {
-		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-"));
+	test("initFiles defaults to a token slot that opens with no Secure Enclave at all", async () => {
+		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-token-"));
+		const prevHelper = process.env[SE_HELPER_ENV];
+		process.env[SE_HELPER_ENV] = "/nonexistent/dogsout-se";
 		try {
 			const r = await initFiles(home);
+			expect(r._unsafeUnwrap().fingerprint).toMatch(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
+			const tokenPath = r._unsafeUnwrap().tokenPath;
+			expect(tokenPath).toBeDefined();
+			expect((await Bun.file(tokenPath ?? "").text()).trim().length).toBeGreaterThanOrEqual(32);
+			const opened = (await openData({ home }))._unsafeUnwrap();
+			expect(opened.envelope.file.fingerprint).toBe(r._unsafeUnwrap().fingerprint);
+			expect(opened.envelope.file.slots.map((s) => s.kind)).toEqual(["token"]);
+		} finally {
+			if (prevHelper === undefined) delete process.env[SE_HELPER_ENV];
+			else process.env[SE_HELPER_ENV] = prevHelper;
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	test("initFiles creates config + a v2 vault that opens through the se slot (--se)", async () => {
+		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-"));
+		try {
+			const r = await initFiles(home, { mode: "se" });
 			expect(r._unsafeUnwrap().fingerprint).toMatch(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
 			const opened = (await openData({ home }))._unsafeUnwrap();
 			expect(opened.envelope.file.fingerprint).toBe(r._unsafeUnwrap().fingerprint);
@@ -117,7 +142,7 @@ describe("store: version-dispatching open/save", () => {
 		const home = mkdtempSync(join(tmpdir(), "dogsout-store-init-deny-"));
 		process.env.FAKE_SE_MODE = "deny";
 		try {
-			const r = await initFiles(home);
+			const r = await initFiles(home, { mode: "se" });
 			expect(r._unsafeUnwrapErr()).toContain("init aborted");
 			expect(await Bun.file(vaultPath(home)).exists()).toBe(false);
 		} finally {
