@@ -1,5 +1,5 @@
 import { rmSync } from "node:fs";
-import { openData, rekeyV2, vaultBackupPath, vaultPath, writeVaultFile } from "@dogsout/core";
+import { openData, readUnlockToken, rekeyV2, vaultBackupPath, vaultPath, writeVaultFile } from "@dogsout/core";
 import { command } from "cmd-ts";
 import { err, ok, type Result } from "neverthrow";
 import { ctxFromEnv } from "../context.ts";
@@ -12,11 +12,15 @@ async function rekeyCore(): Promise<Result<string, string>> {
 	const opened = await openData(ctxR.value);
 	if (opened.isErr()) return err(opened.error);
 	const { envelope, data } = opened.value;
-	const r = await rekeyV2(envelope.file, data);
+	const tokenR = readUnlockToken(home);
+	const r = await rekeyV2(envelope.file, data, { tokens: tokenR.isOk() ? [tokenR.value] : [] });
 	const w = await writeVaultFile(vaultPath(home), r.file, { rotate: false });
 	if (w.isErr()) return err(w.error.kind);
 	for (const n of [1, 2] as const) rmSync(vaultBackupPath(home, n), { force: true });
-	const dropped = r.dropped.length > 0 ? `; ${r.dropped.length} passkey slot(s) dropped — re-enroll in the WebUI` : "";
+	const dropped =
+		r.dropped.length > 0
+			? `; ${r.dropped.length} slot(s) dropped (${r.dropped.map((s) => s.kind).join(", ")}) — re-add tokens with vault token-add, passkeys in the WebUI`
+			: "";
 	return ok(`rekeyed: fingerprint ${envelope.file.fingerprint} → ${r.file.fingerprint}; backups cleared${dropped}`);
 }
 

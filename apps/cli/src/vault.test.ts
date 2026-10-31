@@ -41,12 +41,12 @@ async function v2WithSecret(): Promise<string> {
 }
 
 describe("dogsout vault (fake secure enclave)", () => {
-	test("status lists one se slot on this Mac, the fingerprint and the <2-factor warning", async () => {
+	test("status lists the token slot, the fingerprint and the <2-factor warning", async () => {
 		await v2WithSecret();
 		const r = await runVault(["status"]);
 		const out = r._unsafeUnwrap();
 		expect(out).toMatch(/vault v2 · fingerprint [0-9A-F]{4}-[0-9A-F]{4}/);
-		expect(out).toMatch(/se\s+\S+\s+.*this Mac/);
+		expect(out).toMatch(/token\s+\S+\s+.*local token/);
 		expect(out).toContain("1 unlock factor");
 	});
 

@@ -89,6 +89,7 @@ describe("command table contract (feature map extraction)", () => {
 				"vault restore",
 				"vault slot rm",
 				"vault status",
+				"vault token add",
 			].sort(),
 		);
 		for (const [name, cmd] of out) {
