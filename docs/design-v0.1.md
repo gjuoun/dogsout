@@ -133,6 +133,7 @@ flowchart LR
 - 授权 = 三种 delivery mode 统一裁决
 - repo rename：junethekey → dogsout（已完成）
 - june-oauth → **dogsout-auth**（2026-10-24）：定位 = 独立的专业 OAuth 服务器（dedicated professional OAuth server），与 dogsout 双 repo 并行演进；原「协议核心移植进 apps/api」计划作废
+- **指纹解锁取消（2026-10-30，junguo 拍板）**：本地方案改为 `unlock-token`（0600）驱动的 token slot，`dogsout init` 默认不再要 Touch ID；SE slot 降为 legacy opt-in（`--se` / `DOGSOUT_ALLOW_SE=1`，迁移命令 `vault token add` 一次性使用）。终态：token 由 dogsout-auth 签发、自动续约，reference 的有效期跟随 token 有效期，reference 尽量上云并与 auth 绑定
 
 **待拍板：**
 

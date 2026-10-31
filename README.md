@@ -17,7 +17,7 @@ cd apps/cli && bun link    # puts dogsout on PATH (~/.bun/bin/dogsout)
 cd ../.. && bash apps/ask/build.sh   # native helpers: dogsout-approve (mygo window) + dogsout-se (Secure Enclave unlock)
 ```
 
-Requires [Bun](https://bun.sh) and [Go](https://go.dev) 1.27+ on PATH, and macOS with a Secure Enclave (Apple silicon or T2) — the vault unlocks with Touch ID, there is no master password. Uninstall with `cd apps/cli && bun unlink`.
+Requires [Bun](https://bun.sh) and [Go](https://go.dev) 1.27+ on PATH. The default vault unlocks with a **local 0600 token** (`~/.config/dogsout/unlock-token`) — no biometrics, works headless; `dogsout init --se` keeps the legacy Secure Enclave/Touch ID slot for anyone who wants chip-bound hardware (macOS, Apple silicon or T2). Uninstall with `cd apps/cli && bun unlink`.
 
 ## Repo layout
 
@@ -61,7 +61,7 @@ The approval page mirrors the native mockup (per-key 批准|本次|拒绝, six T
 
 ```bash
 # DOGSOUT_HOME selects storage (default ~/.config/dogsout); there is no password
-dogsout init   # Secure Enclave key + vault.enc + config.json; one Touch ID to prove the slot opens
+dogsout init   # local unlock token (0600) + vault.enc + config.json — no Touch ID
 ```
 
 Upgrading from the pre-rename install (`~/.config/junethekey`, `jtk://` addresses)? Run the one-time
@@ -192,15 +192,16 @@ dogsout get llm                # resolved fresh on every read — rotate upstrea
 
 `map` overlaps with `alias`; the planned merge into a single chained-alias model is tracked as roadmap cleanup.
 
-### Vault: Touch ID, no password
+### Vault: local token, no password
 
 ```bash
 dogsout vault status            # fingerprint, unlock slots, backups — never unlocks
+dogsout vault token add         # migrate a legacy Touch ID vault: adds a token slot (one final Touch ID)
 dogsout vault restore           # vault.enc unreadable? promote the newest verified backup
 dogsout vault rekey             # suspected leak: new data key, slots re-wrapped, backups cleared
 ```
 
-The native helpers are the approval window (`apps/ask/build.sh` → `~/.bun/bin/dogsout-approve`) and the Secure Enclave CLI (`→ ~/.bun/bin/dogsout-se`, `--se-*` modes; `DOGSOUT_SE_HELPER` overrides the path). Every write keeps two rolling backups (`vault.enc.bak.1`, `.bak.2`) — the state before the last two writes. A pre-2026-10-14 password vault (`version: 1`) is refused; re-create it with `dogsout init --force`.
+The native helpers are the approval window (`apps/ask/build.sh` → `~/.bun/bin/dogsout-approve`) and — only for legacy `--se` vaults — the Secure Enclave CLI (`→ ~/.bun/bin/dogsout-se`, `--se-*` modes; `DOGSOUT_SE_HELPER` overrides the path). Every write keeps two rolling backups (`vault.enc.bak.1`, `.bak.2`) — the state before the last two writes. A pre-2026-10-14 password vault (`version: 1`) is refused; re-create it with `dogsout init --force`.
 
 ## Current security boundary
 
@@ -208,10 +209,10 @@ dogsout is a local vault tool, not yet a broker boundary; it does not defend aga
 
 Vault unlock:
 
-- The unlock key lives in this Mac's Secure Enclave and never leaves the chip; dogsout stores only its public key and a chip-bound handle. There is no master password and nothing offline-crackable in `vault.enc`. **The Touch ID slot dies with the Mac** (reinstall, logic-board swap). Until passkey enrollment lands with the F3 WebUI, the vault has exactly one factor — losing the Mac loses the vault.
-- `.userPresence` falls back to the macOS login password when Touch ID is unavailable — the same boundary as the login itself.
-- Until the F3 daemon, every vault command asks Touch ID once, and cron/agents/SSH sessions cannot unlock the vault.
-- Planned (F3): passkey slots via WebAuthn PRF. A synced passkey (iCloud Keychain, 1Password…) puts that provider's account inside the trust boundary — an attacker needs both the account and a copy of `vault.enc`.
+- **Default: a local 0600 token** at `$DOGSOUT_HOME/unlock-token` (or `DOGSOUT_UNLOCK_TOKEN`). The token wraps the DEK in a `token` slot via HKDF-SHA256 (`jtk/token-kek/v1`) — no UI, no chip, works in cron/agents/SSH. The trust boundary is the file mode: anyone with the same uid can read it and open the vault, the same exposure as the 1Password service-account token. Never printed; `vault status` shows only its `token_id` (sha256 prefix).
+- **Legacy Secure Enclave slots** (`dogsout init --se`) still exist for chip-bound hardware. They are never used automatically — `DOGSOUT_ALLOW_SE=1` is the explicit opt-in, set by `dogsout vault token add` for its one migration run (one final Touch ID), after which every command opens with the token.
+- Token expiry is reserved on the slot (`expires_at`): the auth server will issue and auto-renew the token, and reference validity will follow its lifetime.
+- Planned (F3): passkey slots via WebAuthn PRF, and a resident daemon so no command pays a cold start.
 - Rolling backups are whole-file ciphertext copies on the same disk: they protect against a bad write, not against losing the Mac. A removed slot can still open them until rotated out — use `dogsout vault rekey` after a suspected leak.
 
 ### 1Password source
