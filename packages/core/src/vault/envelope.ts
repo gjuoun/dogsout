@@ -3,10 +3,12 @@ import {
 	parseVaultData,
 	type SeSlot,
 	type Slot,
+	type TokenSlot,
 	type VaultData,
 	type VaultFileV2,
 } from "@dogsout/type-contracts";
 import { err, ok, type Result } from "neverthrow";
+import { tokenIdOf } from "./token.ts";
 
 /**
  * vault.enc v2 envelope (whiteboard 939bdf97, PRD §2.1). A random DEK encrypts the data once;
@@ -142,6 +144,76 @@ export async function unlockWithSe(
 	}
 }
 
+/** token KEK = HKDF-SHA256(token, salt vault_id|slot_id, info "jtk/token-kek/v1"). No UI, no chip. */
+async function tokenKek(token: string, vaultId: string, slotId: string): Promise<CryptoKey> {
+	const ikm = await crypto.subtle.importKey("raw", enc.encode(token), "HKDF", false, ["deriveKey"]);
+	return crypto.subtle.deriveKey(
+		{ name: "HKDF", hash: "SHA-256", salt: enc.encode(`${vaultId}|${slotId}`), info: enc.encode("jtk/token-kek/v1") },
+		ikm,
+		{ name: "AES-GCM", length: 256 },
+		false,
+		["encrypt", "decrypt"],
+	);
+}
+
+/** WRAP into a token slot: pure HKDF+AES-GCM, no biometrics. The token never enters the envelope. */
+export async function wrapToken(
+	dek: Uint8Array<ArrayBuffer>,
+	vaultId: string,
+	slotId: string,
+	token: string,
+): Promise<TokenSlot> {
+	const kek = await tokenKek(token, vaultId, slotId);
+	const iv = crypto.getRandomValues(new Uint8Array(12));
+	const wrapped = await crypto.subtle.encrypt(
+		{ name: "AES-GCM", iv, additionalData: slotAad("token", vaultId, slotId) },
+		kek,
+		dek,
+	);
+	return {
+		kind: "token",
+		id: slotId,
+		created_at: new Date().toISOString(),
+		iv: b64(iv),
+		wrapped: b64(wrapped),
+		token_id: tokenIdOf(token),
+	};
+}
+
+/** UNWRAP a token slot. A mismatched token_id is rejected before any crypto, so a wrong file is cheap. */
+export async function unlockWithToken(
+	file: VaultFileV2,
+	slot: TokenSlot,
+	token: string,
+): Promise<Result<Uint8Array<ArrayBuffer>, EnvelopeFailure>> {
+	if (tokenIdOf(token) !== slot.token_id) {
+		return err({ kind: "unlock", message: "unlock token does not match this slot" });
+	}
+	try {
+		const kek = await tokenKek(token, file.vault_id, slot.id);
+		const dek = await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv: unb64(slot.iv), additionalData: slotAad("token", file.vault_id, slot.id) },
+			kek,
+			unb64(slot.wrapped),
+		);
+		return ok(new Uint8Array(dek));
+	} catch {
+		return err({ kind: "unlock", message: "token slot did not open (wrong token or slot from another vault)" });
+	}
+}
+
+/** The token slot this token opens, or null. Selection is by token_id — no unwrap attempt. */
+export function pickTokenSlot(file: VaultFileV2, token: string): TokenSlot | null {
+	const id = tokenIdOf(token);
+	return file.slots.find((s): s is TokenSlot => s.kind === "token" && s.token_id === id) ?? null;
+}
+
+/** A slot id safe to pass as a CLI positional (base64url can start with "-" or "_"). */
+export function newSlotId(): string {
+	const raw = randomB64url(6);
+	return /^[-_]/.test(raw) ? `x${raw.slice(1)}` : raw;
+}
+
 async function seal(dek: Uint8Array<ArrayBuffer>, vaultId: string, data: VaultData): Promise<VaultFileV2["data"]> {
 	const key = await aesKey(dek, ["encrypt"]);
 	const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -178,11 +250,25 @@ export async function createEnvelopeV2(
 ): Promise<{ file: VaultFileV2; dek: Uint8Array<ArrayBuffer> }> {
 	const dek = newDek();
 	const vaultId = randomB64url(16);
-	// base64url ids can start with "-" or "_", which CLI parsers read as a flag;
-	// force an alphanumeric head so slot ids are always safe as positionals.
-	const rawSlotId = randomB64url(6);
-	const slotId = /^[-_]/.test(rawSlotId) ? `x${rawSlotId.slice(1)}` : rawSlotId;
-	const slot = await wrapSe(dek, vaultId, slotId, se);
+	const slot = await wrapSe(dek, vaultId, newSlotId(), se);
+	const file: VaultFileV2 = {
+		version: 2,
+		vault_id: vaultId,
+		fingerprint: await fingerprintOf(dek),
+		data: await seal(dek, vaultId, data),
+		slots: [slot],
+	};
+	return { file, dek };
+}
+
+/** New v2 envelope whose only slot is a local token slot — the no-Touch-ID default since 2026-10-30. */
+export async function createEnvelopeTokenV2(
+	data: VaultData,
+	token: string,
+): Promise<{ file: VaultFileV2; dek: Uint8Array<ArrayBuffer> }> {
+	const dek = newDek();
+	const vaultId = randomB64url(16);
+	const slot = await wrapToken(dek, vaultId, newSlotId(), token);
 	const file: VaultFileV2 = {
 		version: 2,
 		vault_id: vaultId,
@@ -210,19 +296,34 @@ export function removeSlot(file: VaultFileV2, id: string): Result<VaultFileV2, s
 }
 
 /**
- * Rekey (suspected leak): new DEK, data re-sealed, every se slot re-wrapped from its public key
- * (no Touch ID). Passkey slots cannot be re-wrapped without the PRF output, so they are dropped
- * and reported — re-enroll them through the WebUI.
+ * Rekey (suspected leak): new DEK, data re-sealed, se slots re-wrapped from their public key
+ * (no Touch ID), token slots re-wrapped with a token present in `opts.tokens`. Passkey slots and
+ * token slots whose token is unavailable cannot be re-wrapped, so they are dropped and reported —
+ * re-enroll passkeys through the WebUI, re-add tokens with `dogsout vault token-add`.
  */
 export async function rekeyV2(
 	file: VaultFileV2,
 	data: VaultData,
-): Promise<{ file: VaultFileV2; dek: Uint8Array<ArrayBuffer>; dropped: PasskeySlot[] }> {
+	opts: { tokens?: string[] } = {},
+): Promise<{ file: VaultFileV2; dek: Uint8Array<ArrayBuffer>; dropped: Slot[] }> {
 	const dek = newDek();
-	const se = file.slots.filter((s): s is SeSlot => s.kind === "se");
-	const dropped = file.slots.filter((s): s is PasskeySlot => s.kind === "passkey");
+	const tokens = opts.tokens ?? [];
 	const slots: Slot[] = [];
-	for (const s of se) slots.push(await wrapSe(dek, file.vault_id, s.id, { blob: s.blob, pub: s.se_pub }));
+	const dropped: Slot[] = [];
+	for (const s of file.slots) {
+		if (s.kind === "se") {
+			slots.push(await wrapSe(dek, file.vault_id, s.id, { blob: s.blob, pub: s.se_pub }));
+			continue;
+		}
+		if (s.kind === "token") {
+			const token = tokens.find((t) => tokenIdOf(t) === s.token_id);
+			if (token) {
+				slots.push(await wrapToken(dek, file.vault_id, s.id, token));
+				continue;
+			}
+		}
+		dropped.push(s);
+	}
 	const next: VaultFileV2 = {
 		...file,
 		fingerprint: await fingerprintOf(dek),

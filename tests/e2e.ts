@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 // Portable F1 acceptance, migrated from the original F1 acceptance plan.
 // Only fake values and temporary DOGSOUT_HOME directories; drives the real CLI.
-// The vault unlocks through the test-only fake Secure Enclave helper (DOGSOUT_SE_HELPER).
+// The default vault unlocks with a local token; the legacy --se path is exercised
+// through the test-only fake Secure Enclave helper (DOGSOUT_SE_HELPER).
 import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -194,8 +195,8 @@ try {
 	check(v2Set.code === 0 && v2Get.out.trim() === "tok-v2-001", "v2: set/reveal round-trip, no password", v2Get.err);
 	const v2Status = await dogsout(homeV2, ["vault", "status"], "", v2Env);
 	check(
-		v2Status.code === 0 && v2Status.out.includes("this Mac") && v2Status.out.includes("1 unlock factor"),
-		"v2: vault status shows one se slot and the single-factor warning",
+		v2Status.code === 0 && v2Status.out.includes("local token") && v2Status.out.includes("1 unlock factor"),
+		"v2: vault status shows the token slot and the single-factor warning",
 		v2Status.out + v2Status.err,
 	);
 	await dogsout(homeV2, ["set", "dogsout://dev/v2/b", "--stdin"], "tok-b", v2Env);
@@ -223,12 +224,27 @@ try {
 		"v2: rekey clears the backups",
 		v2Rekey.out + v2Rekey.err,
 	);
-	const v2Deny = await dogsout(homeV2, ["get", "dogsout://dev/v2/token"], "", { ...v2Env, FAKE_SE_MODE: "deny" });
+	const v2NoSe = await dogsout(homeV2, ["get", "dogsout://dev/v2/token", "--reveal"], "", {
+		...v2Env,
+		FAKE_SE_MODE: "deny",
+	});
 	check(
-		v2Deny.code === 1 && v2Deny.err.includes("vault unlock failed"),
-		"v2: cancelled Touch ID fails closed",
-		v2Deny.err,
+		v2NoSe.code === 0 && v2NoSe.out.trim() === "tok-v2-001",
+		"v2: token unlock never consults the Secure Enclave",
+		v2NoSe.err,
 	);
+	const homeSe = mkdtempSync(join(tmpdir(), "dogsout-e2e-se-"));
+	const seInit = await dogsout(homeSe, ["init", "--se"], "");
+	const seDeny = await dogsout(homeSe, ["get", "dogsout://dev/x/y"], "", {
+		FAKE_SE_MODE: "deny",
+		DOGSOUT_ALLOW_SE: "1",
+	});
+	check(
+		seInit.code === 0 && seDeny.code === 1 && seDeny.err.includes("vault unlock failed"),
+		"legacy --se vault still fails closed on a cancelled Touch ID",
+		seInit.err + seDeny.err,
+	);
+	rmSync(homeSe, { recursive: true, force: true });
 
 	await Bun.write(
 		join(homeMig, "vault.enc"),

@@ -142,22 +142,38 @@ describe("v2 init and unlock (fake secure enclave helper)", () => {
 		rmSync(v2home, { recursive: true, force: true });
 	});
 
-	test("init needs no password, prints the fingerprint and the single-factor warning", async () => {
+	test("init defaults to a local unlock token — no Touch ID anywhere", async () => {
 		const r = await runInit([], stdinOf(""));
 		const out = r._unsafeUnwrap();
 		expect(out).toMatch(/vault v2, fingerprint [0-9A-F]{4}-[0-9A-F]{4}/);
-		expect(out).toContain("one unlock factor");
+		expect(out).toContain("unlock token");
+		expect(out).not.toContain("Touch ID");
 		expect(JSON.parse(await Bun.file(vaultPath(v2home)).text()).version).toBe(2);
 	});
 
-	test("cancelled Touch ID fails closed", async () => {
+	test("vault reads never touch the Secure Enclave once the token slot exists", async () => {
 		expect((await runSet(["dogsout://dev/gh/token", "--stdin"], stdinOf("FAKE-ghp\n"))).isOk()).toBe(true);
-		process.env.FAKE_SE_MODE = "deny";
+		process.env.FAKE_SE_MODE = "deny"; // any SE call would fail now
 		try {
 			const g = await runGet(["dogsout://dev/gh/token", "--reveal"]);
-			expect(g._unsafeUnwrapErr()).toContain("vault unlock failed");
+			expect(g._unsafeUnwrap()).toBe("FAKE-ghp");
 		} finally {
 			delete process.env.FAKE_SE_MODE;
+		}
+	});
+
+	test("legacy --se init still fails closed on a cancelled Touch ID", async () => {
+		const h = mkdtempSync(join(tmpdir(), "dogsout-cli-v2-se-"));
+		const saved = process.env.DOGSOUT_HOME;
+		process.env.DOGSOUT_HOME = h;
+		process.env.FAKE_SE_MODE = "deny";
+		try {
+			const r = await runInit(["--se"], stdinOf(""));
+			expect(r._unsafeUnwrapErr()).toContain("init aborted");
+		} finally {
+			delete process.env.FAKE_SE_MODE;
+			process.env.DOGSOUT_HOME = saved;
+			rmSync(h, { recursive: true, force: true });
 		}
 	});
 });

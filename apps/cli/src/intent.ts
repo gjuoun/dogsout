@@ -47,11 +47,11 @@ export const featureMap: FeatureMap = {
 	commands: {
 		init: {
 			tier: "stable",
-			does: "create vault.enc + config.json in DOGSOUT_HOME — no password: mints a Secure Enclave key, seals an empty vault, unlocks once (Touch ID) before reporting success",
+			does: "create vault.enc + config.json in DOGSOUT_HOME — no password, no Touch ID: mints a local 0600 unlock token, seals an empty vault with a token slot and verifies it opens; --se keeps the legacy Secure Enclave slot",
 			gotchas: [
 				"--force replaces config AND vault — tests must use temporary DOGSOUT_HOME only",
-				"needs the native helpers (apps/ask/build.sh → ~/.bun/bin/dogsout-se, or DOGSOUT_SE_HELPER); tests point DOGSOUT_SE_HELPER at the fake",
-				"one unlock factor only (this Mac's Touch ID) until WebUI passkey enrollment (F3)",
+				"the unlock token (DOGSOUT_HOME/unlock-token, 0600) is printed as a PATH only — never as a value",
+				"migrating an existing Touch ID vault: dogsout vault token add (one final Touch ID), then every command opens with the token",
 			],
 			legacyFlags: { force: "init-guard" },
 		},
@@ -183,12 +183,12 @@ export const featureMap: FeatureMap = {
 		},
 		vault: {
 			tier: "exp",
-			does: "vault envelope: status (no unlock), rekey, slot rm, restore a verified rolling backup",
+			does: "vault envelope: status (no unlock), rekey, token add (Touch ID → local token migration), slot rm, restore a verified rolling backup",
 			gotchas: [
 				"a v1 (password) vault.enc is refused — cold cut 2026-10-14, no reader, no converter",
-				"until the F3 daemon every vault command asks Touch ID once; cron/agents cannot unlock the vault yet",
+				"unlock order: local token first (no UI); a legacy Secure Enclave slot is used only when DOGSOUT_ALLOW_SE=1, which `vault token add` sets for its one run",
 				"restore promotes the state BEFORE the last write (rolling-backup semantics) and parks the broken file as vault.enc.broken",
-				"rekey drops passkey slots (no PRF output on the CLI) — re-enroll them in the WebUI",
+				"rekey drops passkey slots (no PRF output on the CLI) and token slots whose token is absent — re-add with vault token add",
 			],
 		},
 	},

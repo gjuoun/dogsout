@@ -28,6 +28,7 @@ import { vaultRekeyCommand } from "./vault/rekey.ts";
 import { vaultRestoreCommand } from "./vault/restore.ts";
 import { vaultSlotRmCommand } from "./vault/slot-rm.ts";
 import { vaultStatusCommand } from "./vault/status.ts";
+import { vaultTokenAddCommand } from "./vault/token-add.ts";
 import { vaultCommand } from "./vault/vault.ts";
 
 /** The importable command table: notebook feature map ctx/check consumes this. */
@@ -72,6 +73,7 @@ export const SUBCOMMANDS = {
 		status: vaultStatusCommand(),
 		rekey: vaultRekeyCommand(),
 		restore: vaultRestoreCommand(),
+		token: { add: vaultTokenAddCommand() },
 		slot: { rm: vaultSlotRmCommand() },
 	},
 } as const;

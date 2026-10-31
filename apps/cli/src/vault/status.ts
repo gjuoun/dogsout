@@ -25,6 +25,9 @@ async function statusCore(): Promise<Result<string, string>> {
 		if (s.kind === "se") {
 			const here = (await seProbe(s.blob)) ? "this Mac" : "other Mac";
 			rows.push(`  se       ${s.id}  created ${created}  Touch ID · ${here}`);
+		} else if (s.kind === "token") {
+			const exp = s.expires_at ? ` · expires ${new Date(s.expires_at * 1000).toISOString().slice(0, 10)}` : "";
+			rows.push(`  token    ${s.id}  created ${created}  local token · ${s.token_id}${exp}`);
 		} else {
 			rows.push(`  passkey  ${s.id}  created ${created}  passkey (WebUI)`);
 		}
@@ -32,7 +35,7 @@ async function statusCore(): Promise<Result<string, string>> {
 	const lines = [`vault v2 · fingerprint ${file.fingerprint}`, "slots:", ...rows, backupLine];
 	if (file.slots.length < 2) {
 		lines.push(
-			`warning: ${file.slots.length} unlock factor — add a passkey in the WebUI (F3) so losing this Mac does not lose the vault`,
+			`warning: ${file.slots.length} unlock factor — a second one (another token, or a passkey in the WebUI/F3) keeps the vault readable if this one is lost`,
 		);
 	}
 	return ok(lines.join("\n"));

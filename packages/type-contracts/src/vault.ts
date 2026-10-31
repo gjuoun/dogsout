@@ -65,7 +65,23 @@ export const PasskeySlotSchema = z.object({
 });
 export type PasskeySlot = z.infer<typeof PasskeySlotSchema>;
 
-export const SlotSchema = z.discriminatedUnion("kind", [SeSlotSchema, PasskeySlotSchema]);
+/**
+ * Local token slot — the default unlock factor since 2026-10-30. KEK =
+ * HKDF-SHA256(token, salt vault_id|slot_id, info "jtk/token-kek/v1"), no biometrics, no UI.
+ * The token lives in `$DOGSOUT_HOME/unlock-token` (0600) or `DOGSOUT_UNLOCK_TOKEN`; the auth
+ * server will issue and rotate it, and its expiry bounds how long the slot is usable.
+ */
+export const TokenSlotSchema = z.object({
+	kind: z.literal("token"),
+	...SlotBase,
+	/** sha256(token) first 16 hex chars — selects the slot without an unwrap attempt; reveals nothing. */
+	token_id: z.string().regex(/^[0-9a-f]{16}$/),
+	/** Copied from the token when it carries one (Unix seconds); reference validity follows it. */
+	expires_at: z.number().int().positive().optional(),
+});
+export type TokenSlot = z.infer<typeof TokenSlotSchema>;
+
+export const SlotSchema = z.discriminatedUnion("kind", [SeSlotSchema, PasskeySlotSchema, TokenSlotSchema]);
 export type Slot = z.infer<typeof SlotSchema>;
 
 export const VaultFileV2Schema = z.object({
